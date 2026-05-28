@@ -135,14 +135,14 @@ const extractVideoSegmentDirect = (
 
         // Detect supported Mime types with priorities for native device compatibility
         let selectedMime = "video/webm";
-        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-          selectedMime = "video/webm;codecs=vp9";
-        } else if (MediaRecorder.isTypeSupported("video/webm")) {
-          selectedMime = "video/webm";
-        } else if (MediaRecorder.isTypeSupported("video/mp4;codecs=h264")) {
+        if (MediaRecorder.isTypeSupported("video/mp4;codecs=h264")) {
           selectedMime = "video/mp4;codecs=h264";
         } else if (MediaRecorder.isTypeSupported("video/mp4")) {
           selectedMime = "video/mp4";
+        } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+          selectedMime = "video/webm;codecs=vp9";
+        } else if (MediaRecorder.isTypeSupported("video/webm")) {
+          selectedMime = "video/webm";
         }
 
         mediaRecorder = new MediaRecorder(stream, { mimeType: selectedMime });
@@ -456,6 +456,20 @@ const extractVideoSegmentDirect = (
   };
 
   // Helper to standardise clip names based on innings, over, ball, and outcomes (wide, noball, practice)
+    const getBallLabel = (d: Delivery): string => {
+    const displayOver = Math.max(0, d.over - 1);
+    const outcomeLower = (d.ballOutcome || "").toLowerCase();
+    const descLower = (d.description || "").toLowerCase();
+    const isWide = !!d.isWide || outcomeLower.includes("wide") || descLower.includes("wide");
+    const isNoBall = !!d.isNoBall || outcomeLower.includes("no ball") || outcomeLower.includes("noball") || descLower.includes("no ball") || descLower.includes("noball");
+    
+    let suffix = "";
+    if (isWide) suffix = "_wide";
+    else if (isNoBall) suffix = "_noball";
+    
+    return `${displayOver}.${d.ball}${suffix}`;
+  };
+
   const getClipFilename = (d: Delivery, ext: string = "mp4"): string => {
     const inningsVal = d.innings || (selectedMatch && d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
     const inningsPrefix = inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings";
@@ -525,14 +539,12 @@ const extractVideoSegmentDirect = (
     setActiveBulkCollection(collectionTitle);
 
     const total = targetDeliveries.length;
-    for (let i = 0; i < total; i++) {
-      const delivery = targetDeliveries[i];
+    
+    await Promise.all(targetDeliveries.map(async (delivery, i) => {
       const key = `${delivery.over}_${delivery.ball}`;
       
       setClippingStatus(prev => ({ ...prev, [key]: "Slicing Clip..." }));
-      setBulkClippingProgress(Math.round(((i + 1) / total) * 100));
       
-      // Extract clean timings (stripping replays, crowd pans, ads, practice, breaks)
       const cleanRange = getCleanDeliveryTimestamps(delivery);
       
       try {
@@ -545,7 +557,7 @@ const extractVideoSegmentDirect = (
         const downloadAnchor = document.createElement("a");
         const url = URL.createObjectURL(slicedBlob);
         downloadAnchor.setAttribute("href", url);
-        const actualExtension = slicedBlob.type.includes("webm") ? "webm" : "mp4";
+        const actualExtension = "mp4";
         downloadAnchor.setAttribute("download", getClipFilename(delivery, actualExtension));
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
@@ -557,8 +569,8 @@ const extractVideoSegmentDirect = (
         console.error(err);
       }
       
-      await new Promise(r => setTimeout(r, 600)); // Stagger to let browser process downloads safely
-    }
+      setBulkClippingProgress(prev => Math.min(100, prev + (100 / total)));
+    }));
 
     setTimeout(() => {
       setBulkClippingProgress(0);
@@ -612,7 +624,7 @@ const extractVideoSegmentDirect = (
       const downloadAnchor = document.createElement("a");
       const url = URL.createObjectURL(slicedBlob);
       downloadAnchor.setAttribute("href", url);
-      const actualExtension = slicedBlob.type.includes("webm") ? "webm" : "mp4";
+      const actualExtension = "mp4";
       downloadAnchor.setAttribute("download", getClipFilename(delivery, actualExtension));
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
@@ -711,7 +723,7 @@ const extractVideoSegmentDirect = (
         const downloadAnchor = document.createElement("a");
         const url = URL.createObjectURL(slicedBlob);
         downloadAnchor.setAttribute("href", url);
-        const actualExtension = slicedBlob.type.includes("webm") ? "webm" : "mp4";
+        const actualExtension = "mp4";
         downloadAnchor.setAttribute("download", getClipFilename(delivery, actualExtension));
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
@@ -793,9 +805,7 @@ const extractVideoSegmentDirect = (
       const stepIncrement = 50 / targetDeliveries.length;
       
       // Step 2: Slice and write individual balls
-      for (let i = 0; i < targetDeliveries.length; i++) {
-        const delivery = targetDeliveries[i];
-        
+      await Promise.all(targetDeliveries.map(async (delivery, i) => {
         setZipStatusText(`Slicing & compressing Ball ${Math.max(0, delivery.over - 1)}.${delivery.ball}...`);
         
         let slicedBlob: Blob;
@@ -815,16 +825,15 @@ const extractVideoSegmentDirect = (
           ], { type: "video/mp4" });
         }
         
-        const clipExtension = slicedBlob.type.includes("webm") ? "webm" : "mp4";
+        const clipExtension = "mp4";
         const clipName = getClipFilename(delivery, clipExtension);
         
         const inningsVal = delivery.innings || (delivery.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
         const targetSubFolder = foldersAll[String(inningsVal)] || foldersAll["1"];
         targetSubFolder?.file(clipName, slicedBlob);
         
-        setZipProgress(Math.min(85, Math.round(35 + (i + 1) * stepIncrement)));
-        await new Promise(r => setTimeout(r, 60));
-      }
+        setZipProgress(prev => Math.min(85, prev + (50 / targetDeliveries.length)));
+      }));
 
       // Step 3: Embed a beautifully structured telemetry report inside the ZIP
       setZipStatusText("Generating session analytics report manifest...");
@@ -846,7 +855,7 @@ const extractVideoSegmentDirect = (
         },
         clipsCount: targetDeliveries.length,
         deliveries: targetDeliveries.map(d => ({
-          ballName: `${Math.max(0, d.over - 1)}.${d.ball}`,
+          ballName: `${getBallLabel(d)}`,
           bowler: d.bowler,
           batsman: d.batsman,
           timeRange: {
@@ -999,7 +1008,7 @@ const extractVideoSegmentDirect = (
           ], { type: "video/mp4" });
         }
         
-        const clipExtension = slicedBlob.type.includes("webm") ? "webm" : "mp4";
+        const clipExtension = "mp4";
         const clipName = getClipFilename(delivery, clipExtension);
         
         const inningsVal = delivery.innings || (delivery.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
@@ -1029,7 +1038,7 @@ const extractVideoSegmentDirect = (
         },
         clipsCount: targetDeliveries.length,
         deliveries: targetDeliveries.map(d => ({
-          ballName: `${Math.max(0, d.over - 1)}.${d.ball}`,
+          ballName: `${getBallLabel(d)}`,
           bowler: d.bowler,
           batsman: d.batsman,
           outcome: d.ballOutcome,
@@ -2783,16 +2792,15 @@ const extractVideoSegmentDirect = (
                           "4": zipFolder?.folder("superoverinnings2"),
                         };
 
-                        // Use a sequential loop to prevent browser overlay bottleneck
-                        for (let i = 0; i < total; i++) {
-                          const d = sorted[i];
+                        // Use Promise.all to fetch and generate all clips at once concurrently
+                        await Promise.all(sorted.map(async (d, i) => {
                           const percent = Math.round((i / total) * 100);
                           setOcrProgressPercent(percent);
-                          setOcrProgressText(`Generating clip ${i + 1} of ${total} (Over ${Math.max(0, d.over - 1)}.${d.ball})...`);
+                          setOcrProgressText(`Generating clip ${i + 1} of ${total} (Over ${getBallLabel(d)})...`);
 
                           const cleanRange = getCleanDeliveryTimestamps(d);
                           // Log reading Over digits from user's custom ROI region
-                          const scanningInfo = `[${new Date().toLocaleTimeString()}] [ROI SCAN] Scanned score Over digit inside target Region [X:${roiX}%, Y:${roiY}%] -> Found match for Over ${Math.max(0, d.over - 1)}.${d.ball}`;
+                          const scanningInfo = `[${new Date().toLocaleTimeString()}] [ROI SCAN] Scanned score Over digit inside target Region [X:${roiX}%, Y:${roiY}%] -> Found match for Over ${getBallLabel(d)}`;
                           setOcrLogs(prev => [scanningInfo, ...prev].slice(0, 40));
 
                           try {
@@ -2809,7 +2817,7 @@ const extractVideoSegmentDirect = (
                             const displayOver = Math.max(0, d.over - 1);
                             const newClip = {
                               id: `ff_ocr_clip_${d.over}_${d.ball}_${Date.now()}`,
-                              name: `Over ${displayOver}.${d.ball}`,
+                              name: `Over ${getBallLabel(d)}`,
                               url,
                               over: d.over,
                               ball: d.ball,
@@ -2827,16 +2835,13 @@ const extractVideoSegmentDirect = (
                               return [newClip, ...prev];
                             });
 
-                            const success = `[${new Date().toLocaleTimeString()}] [OCR BATCH SUCCESS] Processed Over ${Math.max(0, d.over - 1)}.${d.ball} via Bounding ROI [X:${roiX}%, Y:${roiY}%]. Stripped ad breaks/replays. Lossless clip ready!`;
+                            const success = `[${new Date().toLocaleTimeString()}] [OCR BATCH SUCCESS] Processed Over ${getBallLabel(d)} via Bounding ROI [X:${roiX}%, Y:${roiY}%]. Stripped ad breaks/replays. Lossless clip ready!`;
                             setOcrLogs(prev => [success, ...prev].slice(0, 40));
                           } catch (err: any) {
-                            const errLog = `[${new Date().toLocaleTimeString()}] [BATCH ERR] Over ${Math.max(0, d.over - 1)}.${d.ball} failed: ${err.message || err}`;
+                            const errLog = `[${new Date().toLocaleTimeString()}] [BATCH ERR] Over ${getBallLabel(d)} failed: ${err.message || err}`;
                             setOcrLogs(prev => [errLog, ...prev].slice(0, 40));
                           }
-
-                          // Tiny delay between sequential tasks to allow codecs to settle
-                          await new Promise(resolve => setTimeout(resolve, 800));
-                        }
+                        }));
 
                         setOcrProgressPercent(95);
                         setOcrProgressText("Zipping folders for download...");
@@ -3325,8 +3330,8 @@ const extractVideoSegmentDirect = (
                             const dSpeed = getDeliverySpeed(d);
                             const displayOver = Math.max(0, d.over - 1);
                             return {
-                              name: `${displayOver}.${d.ball}`,
-                              ballLabel: `Over ${displayOver}.${d.ball}`,
+                              name: getBallLabel(d),
+                              ballLabel: `Over ${getBallLabel(d)}`,
                               speed: dSpeed,
                               bowler: d.bowler || "Bowler",
                               batsman: d.batsman || "Batsman",
@@ -3650,7 +3655,7 @@ const extractVideoSegmentDirect = (
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-3 select-none">
-                  {extractedClips.map((clip) => {
+                  {[...extractedClips].sort((a, b) => a.over !== b.over ? a.over - b.over : a.ball - b.ball).map((clip) => {
                     const isPlayingClip = overrideVideoUrl === clip.url;
                     return (
                       <div
@@ -3664,7 +3669,7 @@ const extractVideoSegmentDirect = (
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9.5px] font-mono px-2 py-0.5 rounded font-extrabold uppercase animate-pulse">
-                              Scorecard Over {clip.over}.{clip.ball} Clip
+                              {clip.name.replace(".mp4", "")}
                             </span>
                             <span className="text-[9.5px] text-[#5b5b60] font-mono">{clip.timestamp}</span>
                           </div>
@@ -3974,7 +3979,7 @@ const extractVideoSegmentDirect = (
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {extractedClips.map((clip) => {
+                  {[...extractedClips].sort((a, b) => a.over !== b.over ? a.over - b.over : a.ball - b.ball).map((clip) => {
                     const isCurrentlyPlaying = overrideVideoUrl === clip.url;
                     return (
                       <div
@@ -3989,7 +3994,7 @@ const extractVideoSegmentDirect = (
                           <div className="flex-1 pr-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={`font-mono font-bold text-xs ${isCurrentlyPlaying ? "text-emerald-400" : "text-white"}`}>
-                                Scorecard Over {clip.over}.{clip.ball} Clip
+                                {clip.name.replace(".mp4", "")}
                               </span>
                               {clip.wicket && (
                                 <span className="bg-red-950 text-red-400 text-[8px] font-bold px-1.5 py-0.2 rounded border border-red-500/20 uppercase">
