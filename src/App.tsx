@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
+import Tesseract from "tesseract.js";
 import { 
   Play, 
   Pause, 
@@ -31,7 +32,6 @@ import {
   Target
 } from "lucide-react";
 import { MatchFeed, Delivery, VisualMarker, ApiStatus } from "./types";
-import PythonInstructions from "./components/PythonInstructions";
 import {
   AreaChart,
   Area,
@@ -207,8 +207,7 @@ const extractVideoSegmentDirect = (
   const [leakedKeyWarning, setLeakedKeyWarning] = useState<boolean>(false);
   const [activeTelemetryTab, setActiveTelemetryTab] = useState<"waveform" | "speedTrend">("speedTrend");
   const [excludeReplays, setExcludeReplays] = useState<boolean>(false);
-  const [inningsFilter, setInningsFilter] = useState<"all" | "1" | "2">("all");
-  const [sidebarTab, setSidebarTab] = useState<"clips" | "scorecard" | "library" | "pro">("clips");
+  const [sidebarTab, setSidebarTab] = useState<"clips" | "library" | "pro">("clips");
   const [zipRangeType, setZipRangeType] = useState<"all" | "range">("all");
   const [zipStartOver, setZipStartOver] = useState<number>(1);
   const [zipEndOver, setZipEndOver] = useState<number>(20);
@@ -410,95 +409,8 @@ const extractVideoSegmentDirect = (
   const [customStreamInput, setCustomStreamInput] = useState("");
   const [activeSourceType, setActiveSourceType] = useState<"preset" | "upload" | "stream">("preset");
 
-  // Live Streaming Simulation engine: auto-appends real-time segmented frames every 12 seconds
-  useEffect(() => {
-    if (!isLiveStreaming) return;
-
-    const outcomes = ["Dot Ball", "1 Run", "4 Runs", "6 Runs", "Wicket (Caught!)", "Wicket (Bowled!)", "Wide", "2 Runs"];
-    const batsmen = ["Steve Smith", "Glenn Maxwell", "Travis Head", "Mitchell Marsh"];
-    const bowlers = ["Jasprit Bumrah", "Mohammed Siraj", "Ravindra Jadeja", "Kuldeep Yadav"];
-    const descriptions = [
-      "Struck firmly past point. Fielder gives chase but easy run completed.",
-      "Incredible stroke! Slashed over third-man boundary for half-a-dozen. Maximum!",
-      "Superb yorker length. Batsman digs it out nicely, returning to non-striker.",
-      "OUT! Sky-high catch caught comfortably at deep mid-wicket. Breakthrough!",
-      "Outside off, batsman tries to cut but misses completely. Clean take by keeper.",
-      "Glorious sweep shot! Swept clean off the middle to the boundary fence for four."
-    ];
-
-    const interval = setInterval(() => {
-      setSelectedMatch((prev) => {
-        if (!prev) return null;
-        if (prev.id !== "live_broadcast") return prev; // Safety guard
-        
-        const currentLength = prev.deliveries.length;
-        const lastOverBall = prev.deliveries[prev.deliveries.length - 1] || { over: 12, ball: 1, startTime: 0, endTime: 10 };
-        
-        let nextOver = lastOverBall.over;
-        let nextBall = lastOverBall.ball + 1;
-        if (nextBall > 6) {
-          nextOver += 1;
-          nextBall = 1;
-        }
-
-        const runCount = Math.floor(Math.random() * 5);
-        const randOutcomeIdx = Math.floor(Math.random() * outcomes.length);
-        const outcome = outcomes[randOutcomeIdx];
-        const isWicket = outcome.startsWith("Wicket");
-        const isExtra = outcome === "Wide";
-        
-        // Logical timestamps progression
-        const baseOffset = (currentLength * 20) % 160;
-        const startTime = baseOffset + 5.0;
-        const endTime = baseOffset + 18.0;
-        const bowlerReleaseTime = baseOffset + 8.5;
-        const batsmanHitTime = baseOffset + 9.2;
-
-        const newDelivery: Delivery = {
-          over: nextOver,
-          ball: nextBall,
-          startTime,
-          endTime,
-          bowlerReleaseTime,
-          batsmanHitTime,
-          ballOutcome: outcome,
-          runs: isWicket ? 0 : isExtra ? 1 : runCount,
-          wicket: isWicket,
-          extra: isExtra,
-          bowler: bowlers[Math.floor(Math.random() * bowlers.length)],
-          batsman: batsmen[Math.floor(Math.random() * batsmen.length)],
-          description: descriptions[Math.floor(Math.random() * descriptions.length)],
-          cameraAngles: ["Live Tracker 1", "Behind Wicket", "Pitch Closeup"],
-          hasReplay: Math.random() > 0.6,
-          replayStart: baseOffset + 11.0,
-          replayEnd: baseOffset + 17.5,
-          visualMarkers: [
-            { time: Math.max(0, bowlerReleaseTime - 3.5), label: "Bowler Runup", type: "info" },
-            { time: bowlerReleaseTime, label: "Ball Release", type: "bowler_release" },
-            { time: bowlerReleaseTime + 0.3, label: "Ball Pitching", type: "info" },
-            { time: batsmanHitTime, label: "Shot", type: "batsman_hit" },
-            { time: batsmanHitTime + 3.0, label: "Scorecard Update", type: "info" }
-          ]
-        };
-
-        const updatedFeed = {
-          ...prev,
-          deliveries: [...prev.deliveries, newDelivery]
-        };
-
-        // Live notification update
-        setSelectedDelivery(newDelivery);
-        if (videoRef.current) {
-          videoRef.current.currentTime = startTime;
-        }
-
-        return updatedFeed;
-      });
-    }, 12000);
-
-    return () => clearInterval(interval);
-  }, [isLiveStreaming]);
-
+  // Live Streaming Simulation engine removed. Only OCR scanning will govern generated clips.
+  
   const startLiveSimulation = (streamUrl: string) => {
     setIsLiveStreaming(true);
     const selectedUrl = streamUrl || "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
@@ -507,37 +419,12 @@ const extractVideoSegmentDirect = (
     const initialLiveFeed: MatchFeed = {
       id: "live_broadcast",
       title: "LIVE - Broadcast Stream Feed",
-      venue: "Dubai International Stadium (Live Connect)",
-      description: "Direct real-time streaming link synchronized. Active ball-by-ball segmentation occurs dynamically.",
+      venue: "Live Connect",
+      description: "Direct real-time streaming link synchronized. Active OCR scanning will populate segments dynamically.",
       videoUrl: selectedUrl,
       duration: 654,
-      quality: "4K AI Broadcast Feed (Sub-second Latency)",
-      deliveries: [
-        {
-          over: 12,
-          ball: 1,
-          startTime: 5.0,
-          endTime: 18.0,
-          bowlerReleaseTime: 8.5,
-          batsmanHitTime: 9.2,
-          ballOutcome: "1 Run",
-          runs: 1,
-          wicket: false,
-          extra: false,
-          bowler: "Jasprit Bumrah",
-          batsman: "Steve Smith",
-          description: "Live Stream delivery tracked. Firm defense steered to sweeper cover for a single.",
-          cameraAngles: ["Tactical Tracker", "Bowler Side Zoom"],
-          hasReplay: false,
-          visualMarkers: [
-            { time: Math.max(0, 8.5 - 3.5), label: "Bowler Runup", type: "info" },
-            { time: 8.5, label: "Ball Release", type: "bowler_release" },
-            { time: 8.5 + 0.3, label: "Ball Pitching", type: "info" },
-            { time: 9.2, label: "Shot", type: "batsman_hit" },
-            { time: 9.2 + 3.0, label: "Scorecard Update", type: "info" }
-          ]
-        }
-      ]
+      quality: "4K Live Feed (Sub-second Latency)",
+      deliveries: []
     };
     
     setPresets((prev) => {
@@ -545,7 +432,7 @@ const extractVideoSegmentDirect = (
       return [initialLiveFeed, ...filtered];
     });
     setSelectedMatch(initialLiveFeed);
-    setSelectedDelivery(initialLiveFeed.deliveries[0]);
+    // Auto focus on the video start
     handleSeek(5.0);
   };
 
@@ -572,7 +459,11 @@ const extractVideoSegmentDirect = (
   const getClipFilename = (d: Delivery, ext: string = "mp4"): string => {
     const inningsVal = d.innings || (selectedMatch && d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
     const inningsPrefix = inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings";
-    const overBall = `${d.over}.${d.ball}`;
+    
+    // Cricket format: over 1 is "0.x", so subtract 1.
+    const displayOver = Math.max(0, d.over - 1);
+    const strOver = String(displayOver);
+    const overBall = `${strOver}.${d.ball}`;
     
     let suffix = "";
     const outcomeLower = (d.ballOutcome || "").toLowerCase();
@@ -734,7 +625,7 @@ const extractVideoSegmentDirect = (
       // Fallback download
       const fallbackBytes = new Blob([
         `CreaseAI Lossless Video Clip Segment\n`,
-        `Ball: ${delivery.over}.${delivery.ball}\n`,
+        `Ball: ${Math.max(0, delivery.over - 1)}.${delivery.ball}\n`,
         `Bowler: ${delivery.bowler}\n`,
         `Batsman: ${delivery.batsman}\n`,
         `Segment Range: ${delivery.startTime.toFixed(1)}s - ${delivery.endTime.toFixed(1)}s (Duration: ${(delivery.endTime - delivery.startTime).toFixed(1)}s)\n`,
@@ -905,7 +796,7 @@ const extractVideoSegmentDirect = (
       for (let i = 0; i < targetDeliveries.length; i++) {
         const delivery = targetDeliveries[i];
         
-        setZipStatusText(`Slicing & compressing Ball ${delivery.over}.${delivery.ball}...`);
+        setZipStatusText(`Slicing & compressing Ball ${Math.max(0, delivery.over - 1)}.${delivery.ball}...`);
         
         let slicedBlob: Blob;
         try {
@@ -919,7 +810,7 @@ const extractVideoSegmentDirect = (
           const cleanRange = getCleanDeliveryTimestamps(delivery);
           slicedBlob = new Blob([
             `CreaseAI Lossless Video Clip Segment\n`,
-            `Ball: ${delivery.over}.${delivery.ball}\n`,
+            `Ball: ${Math.max(0, delivery.over - 1)}.${delivery.ball}\n`,
             `Segment Range: ${cleanRange.startTime.toFixed(1)}s - ${cleanRange.endTime.toFixed(1)}s (Duration: ${(cleanRange.endTime - cleanRange.startTime).toFixed(1)}s)\n`
           ], { type: "video/mp4" });
         }
@@ -955,7 +846,7 @@ const extractVideoSegmentDirect = (
         },
         clipsCount: targetDeliveries.length,
         deliveries: targetDeliveries.map(d => ({
-          ballName: `${d.over}.${d.ball}`,
+          ballName: `${Math.max(0, d.over - 1)}.${d.ball}`,
           bowler: d.bowler,
           batsman: d.batsman,
           timeRange: {
@@ -1053,7 +944,7 @@ const extractVideoSegmentDirect = (
         if (isCrowd) return false;
 
         // Reject any clip that does NOT update the scorecard explicitly
-        const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}`;
+        const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}_${d.startTime}`;
         if (scoreStateStr === prevScoreOverBallOut) return false;
         prevScoreOverBallOut = scoreStateStr;
 
@@ -1088,7 +979,7 @@ const extractVideoSegmentDirect = (
       for (let i = 0; i < targetDeliveries.length; i++) {
         const delivery = targetDeliveries[i];
         
-        setZipStatusText(`Compiling Over ${delivery.over}.${delivery.ball}...`);
+        setZipStatusText(`Compiling Over ${Math.max(0, delivery.over - 1)}.${delivery.ball}...`);
         
         let slicedBlob: Blob;
         try {
@@ -1103,7 +994,7 @@ const extractVideoSegmentDirect = (
           const cleanRange = getCleanDeliveryTimestamps(delivery);
           slicedBlob = new Blob([
             `CreaseAI Lossless Video Clip Segment\n`,
-            `Ball: ${delivery.over}.${delivery.ball}\n`,
+            `Ball: ${Math.max(0, delivery.over - 1)}.${delivery.ball}\n`,
             `Segment Range: ${cleanRange.startTime.toFixed(1)}s - ${cleanRange.endTime.toFixed(1)}s (Duration: ${(cleanRange.endTime - cleanRange.startTime).toFixed(1)}s)\n`
           ], { type: "video/mp4" });
         }
@@ -1138,7 +1029,7 @@ const extractVideoSegmentDirect = (
         },
         clipsCount: targetDeliveries.length,
         deliveries: targetDeliveries.map(d => ({
-          ballName: `${d.over}.${d.ball}`,
+          ballName: `${Math.max(0, d.over - 1)}.${d.ball}`,
           bowler: d.bowler,
           batsman: d.batsman,
           outcome: d.ballOutcome,
@@ -1232,240 +1123,8 @@ const extractVideoSegmentDirect = (
       .catch((err) => console.error("Error loading presets matches", err));
   }, []);
 
-  // Automatically expand deliveries to cover the entire duration of the loaded video
-  useEffect(() => {
-    if (!selectedMatch || duration <= 0) return;
-
-    // Build a unique key for the current match and duration
-    const currentKey = `${selectedMatch.id}_${duration.toFixed(0)}`;
-    if (expandedMatchKeyRef.current === currentKey) return;
-
-    expandedMatchKeyRef.current = currentKey;
-
-    const currentDeliveries = selectedMatch.deliveries || [];
-
-    // Define strict non-play intervals based on total loaded video file size/duration
-    const nonPlayIntervals = [
-      {
-        id: "pre-match",
-        label: "Pre-Match presentation & Commentary",
-        startTime: 0,
-        endTime: Math.min(22.0, duration * 0.1) // First 10% capped at 22s
-      },
-      {
-        id: "ad-break",
-        label: "Commercial Ad Block (Crowd Clean-up)",
-        startTime: duration * 0.35,
-        endTime: duration * 0.35 + Math.min(25.0, duration * 0.15)
-      },
-      {
-        id: "innings-break",
-        label: "Mid-Game Innings Break / Pitch Roller",
-        startTime: duration * 0.6,
-        endTime: duration * 0.6 + Math.min(30.0, duration * 0.15)
-      },
-      {
-        id: "crowd-shot",
-        label: "Spectator Reaction Pan & Flag Wave",
-        startTime: duration * 0.82,
-        endTime: duration * 0.82 + Math.min(12.0, duration * 0.08)
-      },
-      {
-        id: "post-match",
-        label: "Post-Match ceremony & Interviews",
-        startTime: Math.max(0, duration - Math.min(24.0, duration * 0.12)),
-        endTime: duration
-      }
-    ];
-
-    const expanded: Delivery[] = [];
-    let lastOver = selectedMatch.id.startsWith("custom_") ? simulatedOver : 1;
-    if (lastOver < 1) lastOver = 1;
-    let lastBall = 0; // Starts from 0, so next ball is ball 1 sequentially
-    let sequenceCounter = 0;
-    let currentTimeCursor = 1.0;
-
-    // Determine typical bowler and batsman names to keep it realistic
-    const bowlerChoice = currentDeliveries[0]?.bowler || "Jasprit Bumrah";
-    const batsmanChoice = currentDeliveries[0]?.batsman || "Steve Smith";
-
-    // Fill in deliveries every 22 seconds of video duration, up to the end, skipping non-play ranges
-    while (currentTimeCursor < duration) {
-      // 1. Check if the current cursor lands inside any non-play interval
-      const overlappingInterval = nonPlayIntervals.find(
-        interval => currentTimeCursor >= interval.startTime && currentTimeCursor < interval.endTime
-      );
-
-      if (overlappingInterval) {
-        if (overlappingInterval.id === "innings-break") {
-          lastOver = 1;
-          lastBall = 0;
-        }
-        currentTimeCursor = overlappingInterval.endTime + 0.5;
-        continue;
-      }
-
-      // 2. Propose a ball boundary starting slightly after cursor
-      const ballStartTime = currentTimeCursor + 2.0;
-      const ballEndTime = Math.min(duration, ballStartTime + 18.0);
-
-      // Verify that this proposed ball doesn't conflict with upcoming non-play intervals
-      const conflictingNonPlay = nonPlayIntervals.find(
-        interval => ballStartTime < interval.endTime && ballEndTime > interval.startTime
-      );
-
-      if (conflictingNonPlay) {
-        if (conflictingNonPlay.id === "innings-break") {
-          lastOver = 1;
-          lastBall = 0;
-        }
-        currentTimeCursor = conflictingNonPlay.endTime + 0.5;
-        continue;
-      }
-
-      if (ballEndTime > duration - 2.0) {
-        break; // Stop when we are too close to the post-match zone
-      }
-
-      sequenceCounter++;
-
-      const bowlerReleaseTime = ballStartTime + 4.5;
-      const batsmanHitTime = ballStartTime + 5.2;
-
-      // Variety of outcomes
-      const runsChoices = [0, 4, 1, 0, 6, 2, 0, 1];
-      const wicketChoices = [false, false, false, false, false, false, true, false];
-      
-      const seedIndex = sequenceCounter % runsChoices.length;
-      const runs = runsChoices[seedIndex];
-      const wicket = runs === 0 ? wicketChoices[seedIndex] : false;
-      
-      // Pure scorecard OCR detection doesn't detect practice deliveries because they don't update the scorecard
-      const isPractice = false;
-
-      // Wide and No ball outcomes (ensuring exclusive check from practice)
-      const isWide = !isPractice && sequenceCounter % 8 === 2;
-      const isNoBall = !isPractice && !isWide && sequenceCounter % 11 === 3;
-      
-      // Determine if it has a broadcast replay (only for boundaries or wickets, not practice, wide, no ball)
-      const isReplay = !isPractice && !isWide && !isNoBall && (runs >= 4 || wicket) && sequenceCounter % 3 === 1;
-
-      // Increment ball or over sequential order ONLY for real deliveries (starting ball one)
-      let currentBallInOver = lastBall;
-      let currentOver = lastOver;
-      
-      if (!isPractice && !isWide && !isNoBall) {
-        if (lastBall >= 6) {
-          lastOver += 1;
-          lastBall = 1;
-        } else {
-          lastBall += 1;
-        }
-        currentBallInOver = lastBall;
-        currentOver = lastOver;
-      } else {
-        // If it's a wide/no ball/practice, and it's the first ball of the over, keep it as ball 0 (or 1 depending on display prefs)
-        currentBallInOver = Math.max(1, lastBall); 
-        currentOver = lastOver;
-      }
-
-      // Assign rotating camera perspective to ensure camera adaptation
-      const cameraSeed = sequenceCounter % 3;
-      const cameraAngleChoice = cameraSeed === 0 
-        ? "Wide Shot (Tactical)" 
-        : cameraSeed === 1 
-          ? "Wicket Close-Up" 
-          : "Follow-The-Ball Perspective";
-
-      const currentInningsValue: 1 | 2 = ballStartTime >= (duration * 0.6) ? 2 : 1;
-
-      let ballOutcome = "Dot Ball";
-      let finalRuns = isPractice ? 0 : runs;
-      let finalWicket = isPractice ? false : wicket;
-      let finalDescription = `Automatic OCR boundary segmented delivery. Over ${currentOver}.${currentBallInOver} detected cleanly. Scorecard overs advanced sequentially.`;
-
-      if (isPractice) {
-        ballOutcome = "Practice Delivery (No-Score Runs)";
-        finalDescription = `Trial practice run-up ball for ${bowlerChoice} to calibrate bowling rhythm before spelling.`;
-      } else if (isWide) {
-        ballOutcome = "Wide Ball";
-        finalRuns = 1;
-        finalWicket = false;
-        finalDescription = `Analytical scorecard wide radar detected: delivery strayed outside the visual crease line guides. Match scorecard updated sequentially.`;
-      } else if (isNoBall) {
-        ballOutcome = "No Ball";
-        finalRuns = 1;
-        finalWicket = false;
-        finalDescription = `Crease line tracking alert: bowler's overstepping stride detected at release, resulting in a free-hit.`;
-      } else if (wicket) {
-        ballOutcome = "Wicket (Caught!)";
-      } else if (runs === 4) {
-        ballOutcome = "4 Runs (Boundary!)";
-      } else if (runs === 6) {
-        ballOutcome = "6 Runs (Massive Six!)";
-      } else if (runs > 0) {
-        ballOutcome = `${runs} Run${runs > 1 ? "s" : ""}`;
-      }
-
-      const deliveryPayload: Delivery = {
-        over: currentOver,
-        ball: currentBallInOver,
-        startTime: ballStartTime,
-        endTime: ballEndTime,
-        bowlerReleaseTime: bowlerReleaseTime,
-        batsmanHitTime: batsmanHitTime,
-        ballOutcome: ballOutcome,
-        runs: finalRuns,
-        wicket: finalWicket,
-        extra: isPractice || isWide || isNoBall,
-        bowler: bowlerChoice,
-        batsman: batsmanChoice,
-        description: finalDescription,
-        cameraAngles: [cameraAngleChoice],
-        hasReplay: isReplay,
-        replayStart: isReplay ? ballStartTime + 11.0 : undefined,
-        replayEnd: isReplay ? ballEndTime : undefined,
-        isPractice: isPractice,
-        isWide: isWide,
-        isNoBall: isNoBall,
-        innings: currentInningsValue,
-        visualMarkers: ([
-          { time: Math.max(0, bowlerReleaseTime - 3.5), label: "Bowler Runup", type: "info" as const },
-          { time: bowlerReleaseTime, label: "Ball Release", type: "bowler_release" as const },
-          { time: bowlerReleaseTime + 0.3, label: "Ball Pitching", type: "info" as const },
-          { time: batsmanHitTime, label: "Shot", type: "batsman_hit" as const },
-          { time: batsmanHitTime + 3.0, label: "Scorecard Update", type: "info" as const }
-        ] as VisualMarker[]).concat(isReplay ? [{ time: ballStartTime + 11.0, label: "Slo-mo replay sequence", type: "replay_start" as const }] : [])
-      };
-
-      expanded.push(deliveryPayload);
-
-      currentTimeCursor = ballEndTime;
-    }
-
-    // Update state
-    setSelectedMatch(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        deliveries: expanded
-      };
-    });
-
-    // Synchronize in presets as well so that the UI options don't revert on re-selection
-    setPresets(prevPresets => {
-      return prevPresets.map(p => {
-        if (p.id === selectedMatch.id) {
-          return { ...p, deliveries: expanded };
-        }
-        return p;
-      });
-    });
-
-    // Log detection
-    const msg = `[${new Date().toLocaleTimeString()}] [METADATA SYNC] Full match video metadata loaded successfully (${duration.toFixed(1)}s). Excluded pre-match, post-match, ad blocks, innings breaks, and crowd reaction tracks. Segmented ${expanded.length} sequentially-numbered ball-by-ball play deliveries.`;
-    setOcrLogs(prev => [msg, ...prev].slice(0, 40));
-  }, [selectedMatch?.id, duration]);
+  // Dummy timeline delivery expansion block removed
+  // Clips will be generated purely by OCR now!
 
   // Synchronously compute and update the playback frame-rate of uploaded custom videos
   useEffect(() => {
@@ -1676,183 +1335,92 @@ const extractVideoSegmentDirect = (
     };
   }, [isPlaying, currentTime, selectedMatch?.id]);
 
-  // Dynamic Scorecard OCR simulator
-  const getOcrTextForTime = (time: number): { text: string; overBall: string; extraDetails: string; runs: number; wicket: boolean; bowler: string; batsman: string; outcome: string } => {
-    if (selectedMatch && selectedMatch.deliveries && selectedMatch.deliveries.length > 0) {
-      const delivery = selectedMatch.deliveries.find(d => time >= d.startTime && time <= d.endTime);
-      if (delivery) {
-        const team = selectedMatch.id.includes("powerplay") ? "IND" : "AUS";
-        const totalRuns = selectedMatch.deliveries
-          .filter(d => (d.over < delivery.over) || (d.over === delivery.over && d.ball <= delivery.ball))
-          .reduce((sum, d) => sum + d.runs, 102);
-        
-        const totalWickets = selectedMatch.deliveries
-          .filter(d => (d.over < delivery.over) || (d.over === delivery.over && d.ball <= delivery.ball))
-          .filter(d => d.wicket)
-          .length;
-
-        return {
-          text: `${team} ${totalRuns}/${totalWickets} • Over ${delivery.over}.${delivery.ball}`,
-          overBall: `${delivery.over}.${delivery.ball}`,
-          extraDetails: `Bowler: ${delivery.bowler} | Striker: ${delivery.batsman}`,
-          runs: delivery.runs,
-          wicket: delivery.wicket,
-          bowler: delivery.bowler,
-          batsman: delivery.batsman,
-          outcome: delivery.ballOutcome
-        };
-      } else {
-        // Dead ball or gap
-        const team = selectedMatch.id.includes("powerplay") ? "IND" : "AUS";
-        const prevDeliveries = selectedMatch.deliveries.filter(d => d.endTime < time);
-        const prev = prevDeliveries[prevDeliveries.length - 1];
-        const prevOverBall = prev ? `${prev.over}.${prev.ball}` : "0.0";
-        const totalRuns = prevDeliveries.reduce((sum, d) => sum + d.runs, 102);
-        const totalWickets = prevDeliveries.filter(d => d.wicket).length;
-
-        return {
-          text: `${team} ${totalRuns}/${totalWickets} • Over ${prevOverBall} [Dead Ball]`,
-          overBall: prevOverBall,
-          extraDetails: "Dead Ball Region (Field Cleanup)",
-          runs: 0,
-          wicket: false,
-          bowler: prev?.bowler || "Bowler",
-          batsman: prev?.batsman || "Batsman",
-          outcome: "Dot Ball"
-        };
-      }
-    } else {
-      // Custom uploaded video without preloaded deliveries
-      const calculatedOver = Math.floor(time / 20) + (simulatedOver || 1);
-      const calculatedBall = Math.min(6, Math.floor((time % 20) / 3) + 1);
-      const overBallStr = `${calculatedOver}.${calculatedBall}`;
-      
-      const seedRuns = [1, 0, 4, 0, 6, 0, 2];
-      const runs = seedRuns[Math.floor(time / 4) % seedRuns.length];
-      const wicket = runs === 0 && Math.floor(time / 15) % 7 === 1;
-
-      const score = Math.floor(time * 0.8) + 45;
-      const wickets = Math.floor(time / 30) % 10;
-
-      return {
-        text: `RSA ${score}/${wickets} • Over ${overBallStr}`,
-        overBall: overBallStr,
-        extraDetails: `ROI Frame Capture • Target Analyser [X:${roiX}% Y:${roiY}%]`,
-        runs,
-        wicket,
-        bowler: "Anrich Nortje",
-        batsman: "Quinton de Kock",
-        outcome: wicket ? "Wicket (Caught!)" : runs === 4 ? "4 Runs" : runs === 6 ? "6 Runs" : runs === 0 ? "Dot Ball" : `${runs} Runs`
-      };
-    }
-  };
-
   // Automated OCR Scorecard scanning & dynamic clipping engine
   useEffect(() => {
     if (!ocrEnabled) return;
 
-    const data = getOcrTextForTime(currentTime);
-    setOcrRecognizedText(data.text);
-
-    const currentBallKey = data.overBall;
-    if (currentBallKey && currentBallKey !== "0.0" && currentBallKey !== lastOcrProcessedBall) {
-      // 1. Practice ball and replay filter checks:
-      let isPracticeBall = false;
-      let isReplaySeq = false;
-      let matchingD: any = undefined;
-
-      if (selectedMatch && selectedMatch.deliveries) {
-        matchingD = selectedMatch.deliveries.find(d => `${d.over}.${d.ball}` === currentBallKey);
-        if (matchingD) {
-          isPracticeBall = !!matchingD.isPractice || 
-                           (matchingD.ballOutcome || "").toLowerCase().includes("practice") ||
-                           (matchingD.ballOutcome || "").toLowerCase().includes("trial") ||
-                           (matchingD.description || "").toLowerCase().includes("practice") || 
-                           (matchingD.description || "").toLowerCase().includes("warm-up");
-          isReplaySeq = !!matchingD.hasReplay || 
-                        (matchingD.ballOutcome || "").toLowerCase().includes("replay") ||
-                        (matchingD.description || "").toLowerCase().includes("replay");
-        }
-      }
-
-      if (isPracticeBall || practiceMode) {
-        setLastOcrProcessedBall(currentBallKey);
-        setOcrLogs(prev => [
-          `[${new Date().toLocaleTimeString()}] [OCR BYPASS] Suppressed Over ${currentBallKey}: Identified as Practice/Warm-up Ball or Global Practice Mode is active.`,
-          ...prev
-        ].slice(0, 40));
-        return;
-      }
-
-      if (isReplaySeq) {
-        setLastOcrProcessedBall(currentBallKey);
-        setOcrLogs(prev => [
-          `[${new Date().toLocaleTimeString()}] [OCR BYPASS] Suppressed Over ${currentBallKey}: Replay / Ad break detected. Focus is on active play only.`,
-          ...prev
-        ].slice(0, 40));
-        return;
-      }
-
-      setLastOcrProcessedBall(currentBallKey);
-
-      // Add elegant scroll logs
-      const timestamp = new Date().toLocaleTimeString();
-      const textLog = `[${timestamp}] [OCR SCANNER] Scorecard text updated: "${data.text}"`;
-      const actionLog = `[${timestamp}] [DETECTION] Scorecard over advanced to Over ${currentBallKey}. Initiating automatic segment extraction!`;
+    // Use intervals instead of raw currentTime to avoid crashing via Tesseract
+    const ocrInterval = setInterval(async () => {
+      if (!videoRef.current || !ocrEnabled || autoClippingInProgress) return;
       
-      setOcrLogs(prev => [actionLog, textLog, ...prev].slice(0, 40));
+      const video = videoRef.current;
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (width === 0 || height === 0 || !ctx) return;
 
-      // Coordinate segment timeframe:
-      // For custom auto-detected videos, crop a 18-second sweet spot surrounding the event
-      // The scorecard updates AFTER the ball is fully completed, so we must buffer backwards
-      // 15 seconds to capture the full run-up, delivery, and post-delivery reaction.
-      let startTime = Math.max(0, currentTime - 15.0);
-      let endTime = currentTime + 3.0;
+      const rw = Math.round((roiWidth / 100) * width);
+      const rh = Math.round((roiHeight / 100) * height);
+      const rx = Math.round((roiX / 100) * width);
+      const ry = Math.round((roiY / 100) * height);
+      
+      canvas.width = rw;
+      canvas.height = rh;
+      ctx.drawImage(video, rx, ry, rw, rh, 0, 0, rw, rh);
+      
+      try {
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+        const cleanText = text.replace(/\n/g, " ").trim();
+        setOcrRecognizedText(cleanText);
 
-      if (matchingD) {
-        const cleanRange = getCleanDeliveryTimestamps(matchingD);
-        startTime = cleanRange.startTime;
-        endTime = cleanRange.endTime;
+        // find over.ball number using regex e.g. "12.1"
+        const match = cleanText.match(/\b([0-9]+\.[1-6])\b/);
+        if (match) {
+           const currentBallKey = match[1];
+           if (currentBallKey !== lastOcrProcessedBall && currentBallKey !== "0.0") {
+             setLastOcrProcessedBall(currentBallKey);
+             
+             // Extract Video ...
+             const timestamp = new Date().toLocaleTimeString();
+             const textLog = `[${timestamp}] [OCR SCANNER] Scorecard text updated: "${cleanText}"`;
+             const actionLog = `[${timestamp}] [DETECTION] Scorecard over advanced to Over ${currentBallKey}. Initiating automatic segment extraction!`;
+             
+             setOcrLogs(prev => [actionLog, textLog, ...prev].slice(0, 40));
+             
+             const cTime = video.currentTime;
+             let startTime = Math.max(0, cTime - 15.0);
+             let endTime = cTime + 3.0;
+
+             setAutoClippingInProgress(true);
+             extractVideoSegmentDirect(overrideVideoUrl || selectedMatch?.videoUrl || "", startTime, endTime).then((blob) => {
+                const videoBlobUrl = URL.createObjectURL(blob);
+                const [over, ball] = currentBallKey.split(".");
+                const newClip = {
+                  id: `ocr_clip_${currentBallKey}_${Date.now()}`,
+                  name: `Scorecard Over ${currentBallKey} Clip`,
+                  url: videoBlobUrl,
+                  over: parseInt(over),
+                  ball: parseInt(ball),
+                  bowler: ocrBowlerName,
+                  batsman: ocrBatsmanName,
+                  outcome: "Detected OCR",
+                  runs: 0,
+                  wicket: false,
+                  timestamp: new Date().toLocaleTimeString(),
+                  videoUrl: selectedMatch?.videoUrl || ""
+                };
+                
+                setExtractedClips(prev => {
+                  if (prev.some(c => c.name === newClip.name)) return prev;
+                  return [newClip, ...prev];
+                });
+                const successLog = `[${new Date().toLocaleTimeString()}] [CLIPPER] Registered lossless segment: "${newClip.name}" (${(blob.size / (1024 * 1024)).toFixed(2)} MB, ${(endTime - startTime).toFixed(1)}s)`;
+                setOcrLogs(prev => [successLog, ...prev].slice(0, 40));
+             }).catch((err: any) => {
+                const errorLog = `[${new Date().toLocaleTimeString()}] [ERROR] Auto-extraction failed: ${err.message || err}`;
+                setOcrLogs(prev => [errorLog, ...prev].slice(0, 40));
+             }).finally(() => setAutoClippingInProgress(false));
+           }
+        }
+      } catch (e) {
+        // Tesseract might fail if uninitialized or canvas is broken
       }
+    }, 2500);
 
-      setAutoClippingInProgress(true);
-
-      extractVideoSegmentDirect(overrideVideoUrl || selectedMatch?.videoUrl || "", startTime, endTime)
-        .then((blob) => {
-          const videoBlobUrl = URL.createObjectURL(blob);
-          const newClip = {
-            id: `ocr_clip_${currentBallKey}_${Date.now()}`,
-            name: `Scorecard Over ${currentBallKey} Clip`,
-            url: videoBlobUrl,
-            over: parseInt(currentBallKey.split(".")[0]) || 0,
-            ball: parseInt(currentBallKey.split(".")[1]) || 1,
-            bowler: data.bowler,
-            batsman: data.batsman,
-            outcome: data.outcome,
-            runs: data.runs,
-            wicket: data.wicket,
-            timestamp: new Date().toLocaleTimeString(),
-            videoUrl: selectedMatch?.videoUrl || ""
-          };
-
-          setExtractedClips(prev => {
-            // Deduplicate clips with exactly identical name for cleaner experience
-            if (prev.some(c => c.name === newClip.name)) return prev;
-            return [newClip, ...prev];
-          });
-
-          const successLog = `[${new Date().toLocaleTimeString()}] [CLIPPER] Registered lossless segment: "${newClip.name}" (${(blob.size / (1024 * 1024)).toFixed(2)} MB, ${(endTime - startTime).toFixed(1)}s)`;
-          setOcrLogs(prev => [successLog, ...prev].slice(0, 40));
-        })
-        .catch((err: any) => {
-          const errorLog = `[${new Date().toLocaleTimeString()}] [ERROR] Auto-extraction failed: ${err.message || err}`;
-          setOcrLogs(prev => [errorLog, ...prev].slice(0, 40));
-        })
-        .finally(() => {
-          setAutoClippingInProgress(false);
-        });
-    }
-  }, [currentTime, ocrEnabled, selectedMatch, lastOcrProcessedBall]);
+    return () => clearInterval(ocrInterval);
+  }, [ocrEnabled, autoClippingInProgress, lastOcrProcessedBall, roiX, roiY, roiWidth, roiHeight, overrideVideoUrl, selectedMatch?.videoUrl, ocrBowlerName, ocrBatsmanName]);
 
   // Draggable corner handles mouseMove + mouseUp event tracking
   useEffect(() => {
@@ -2188,13 +1756,11 @@ const extractVideoSegmentDirect = (
             id: `custom_${Date.now()}`,
             title: data.analysis.matchTitle || file.name,
             venue: data.analysis.venue || "Analysed Live Feed",
-            description: isLargeFile 
-              ? "Optimized Large Video (Bypassed network payload boundaries for instant zero-lag offline processing)."
-              : (data.analysis.description || "Temporal segments calculated successfully."),
+            description: "Video loaded successfully. Clips will only be generated via OCR Scanning.",
             videoUrl: URL.createObjectURL(file), // Handles multi-gigabyte HTML5 streams instantly on local CPU
             duration: 120, // estimated
             quality: isLargeFile ? "Unlimited Size Local Stream" : "Local Media Stream (No Size Limit)",
-            deliveries: data.analysis.deliveries || []
+            deliveries: []
           };
 
           setIsLiveStreaming(false); // Disable live interval for file uploads
@@ -2258,11 +1824,11 @@ const extractVideoSegmentDirect = (
             id: `custom_${Date.now()}`,
             title: data.analysis.matchTitle || file.name,
             venue: data.analysis.venue || "Analysed Live Feed",
-            description: data.analysis.description || "Temporal segments calculated successfully.",
+            description: "Video loaded successfully. Clips will only be generated via OCR Scanning.",
             videoUrl: URL.createObjectURL(file),
             duration: 120,
             quality: "Local Video Feed",
-            deliveries: data.analysis.deliveries || []
+            deliveries: []
           };
 
           setIsLiveStreaming(false);
@@ -2277,11 +1843,11 @@ const extractVideoSegmentDirect = (
             id: `custom_${Date.now()}`,
             title: data.analysis.matchTitle || file.name,
             venue: data.analysis.venue || "Analysed Live Feed",
-            description: data.analysis.description || "Temporal segments calculated successfully.",
+            description: "Video loaded successfully. Clips will only be generated via OCR Scanning.",
             videoUrl: URL.createObjectURL(file), 
             duration: 120, // estimated
             quality: "Local Encoded Video",
-            deliveries: data.analysis.deliveries || []
+            deliveries: []
           };
 
           setIsLiveStreaming(false);
@@ -2413,10 +1979,6 @@ const extractVideoSegmentDirect = (
   // Helper values
   const visibleDeliveries = selectedMatch?.deliveries.filter(d => {
     if (excludeReplays && d.hasReplay) return false;
-    if (inningsFilter !== "all") {
-      const dInnings = d.innings || (selectedMatch && d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
-      return String(dInnings) === inningsFilter;
-    }
     return true;
   }) || [];
   const totalDeliveriesCount = visibleDeliveries.length;
@@ -2468,15 +2030,6 @@ const extractVideoSegmentDirect = (
               <span className="text-[#a1a1a6]">Simulated Gemini Analytics</span>
             )}
           </div>
-
-          <a
-            href="/api/download-python"
-            download="cricket_segmenter.py"
-            id="quick-download-script-top"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.8 rounded-xl text-xs font-semibold tracking-wider transition-all shadow-md shadow-emerald-900/30 flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" /> Export VS Code Runner
-          </a>
         </div>
       </header>
 
@@ -3201,7 +2754,7 @@ const extractVideoSegmentDirect = (
                           if (isCrowd) return false;
                           
                           // Reject any clip that does NOT update the scorecard explicitly
-                          const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}`;
+                          const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}_${d.startTime}`;
                           if (scoreStateStr === prevScoreOverBallOut) return false;
                           prevScoreOverBallOut = scoreStateStr;
                           
@@ -3235,11 +2788,11 @@ const extractVideoSegmentDirect = (
                           const d = sorted[i];
                           const percent = Math.round((i / total) * 100);
                           setOcrProgressPercent(percent);
-                          setOcrProgressText(`Generating clip ${i + 1} of ${total} (Over ${d.over}.${d.ball})...`);
+                          setOcrProgressText(`Generating clip ${i + 1} of ${total} (Over ${Math.max(0, d.over - 1)}.${d.ball})...`);
 
                           const cleanRange = getCleanDeliveryTimestamps(d);
                           // Log reading Over digits from user's custom ROI region
-                          const scanningInfo = `[${new Date().toLocaleTimeString()}] [ROI SCAN] Scanned score Over digit inside target Region [X:${roiX}%, Y:${roiY}%] -> Found match for Over ${d.over}.${d.ball}`;
+                          const scanningInfo = `[${new Date().toLocaleTimeString()}] [ROI SCAN] Scanned score Over digit inside target Region [X:${roiX}%, Y:${roiY}%] -> Found match for Over ${Math.max(0, d.over - 1)}.${d.ball}`;
                           setOcrLogs(prev => [scanningInfo, ...prev].slice(0, 40));
 
                           try {
@@ -3248,13 +2801,15 @@ const extractVideoSegmentDirect = (
                             
                             const inningsVal = d.innings || (d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
                             const targetSubFolder = foldersOcr[String(inningsVal)] || foldersOcr["1"];
-                            const clipName = `${inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings"}_Over_${d.over}.${d.ball}.mp4`;
+                            
+                            const clipName = getClipFilename(d, "mp4");
                             
                             targetSubFolder?.file(clipName, blob);
                             
+                            const displayOver = Math.max(0, d.over - 1);
                             const newClip = {
                               id: `ff_ocr_clip_${d.over}_${d.ball}_${Date.now()}`,
-                              name: `Over ${d.over}.${d.ball}`,
+                              name: `Over ${displayOver}.${d.ball}`,
                               url,
                               over: d.over,
                               ball: d.ball,
@@ -3272,10 +2827,10 @@ const extractVideoSegmentDirect = (
                               return [newClip, ...prev];
                             });
 
-                            const success = `[${new Date().toLocaleTimeString()}] [OCR BATCH SUCCESS] Processed Over ${d.over}.${d.ball} via Bounding ROI [X:${roiX}%, Y:${roiY}%]. Stripped ad breaks/replays. Lossless clip ready!`;
+                            const success = `[${new Date().toLocaleTimeString()}] [OCR BATCH SUCCESS] Processed Over ${Math.max(0, d.over - 1)}.${d.ball} via Bounding ROI [X:${roiX}%, Y:${roiY}%]. Stripped ad breaks/replays. Lossless clip ready!`;
                             setOcrLogs(prev => [success, ...prev].slice(0, 40));
                           } catch (err: any) {
-                            const errLog = `[${new Date().toLocaleTimeString()}] [BATCH ERR] Over ${d.over}.${d.ball} failed: ${err.message || err}`;
+                            const errLog = `[${new Date().toLocaleTimeString()}] [BATCH ERR] Over ${Math.max(0, d.over - 1)}.${d.ball} failed: ${err.message || err}`;
                             setOcrLogs(prev => [errLog, ...prev].slice(0, 40));
                           }
 
@@ -3594,30 +3149,7 @@ const extractVideoSegmentDirect = (
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#181822]/40">
-                        <span className="text-[9px] font-sans text-[#717176] mr-auto">Scorecard Presets:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleOverrideAllPlayers("Rohit Sharma", "Mitchell Starc")}
-                          className="px-2 py-0.5 rounded bg-[#16161c] hover:bg-[#202028] text-[#a1a1a6] hover:text-white border border-[#2d2d35] font-mono text-[9px] transition-all cursor-pointer"
-                        >
-                          R. Sharma & Starc
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOverrideAllPlayers("Virat Kohli", "Jasprit Bumrah")}
-                          className="px-2 py-0.5 rounded bg-[#16161c] hover:bg-[#202028] text-[#a1a1a6] hover:text-white border border-[#2d2d35] font-mono text-[9px] transition-all cursor-pointer"
-                        >
-                          V. Kohli & Bumrah
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOverrideAllPlayers("Harry Brook", "Mark Wood")}
-                          className="px-2 py-0.5 rounded bg-[#16161c] hover:bg-[#202028] text-[#a1a1a6] hover:text-white border border-[#2d2d35] font-mono text-[9px] transition-all cursor-pointer"
-                        >
-                          H. Brook & M. Wood
-                        </button>
-                      </div>
+                      {/* Scorecard player override stripped entirely */}
                     </div>
                   </div>
 
@@ -3791,9 +3323,10 @@ const extractVideoSegmentDirect = (
                         <AreaChart
                           data={visibleDeliveries.map((d) => {
                             const dSpeed = getDeliverySpeed(d);
+                            const displayOver = Math.max(0, d.over - 1);
                             return {
-                              name: `${d.over}.${d.ball}`,
-                              ballLabel: `Over ${d.over}.${d.ball}`,
+                              name: `${displayOver}.${d.ball}`,
+                              ballLabel: `Over ${displayOver}.${d.ball}`,
                               speed: dSpeed,
                               bowler: d.bowler || "Bowler",
                               batsman: d.batsman || "Batsman",
@@ -4194,11 +3727,6 @@ const extractVideoSegmentDirect = (
             </div>
           </section>
 
-          {/* PYTHON RUNNER SECTION FOR VS CODE LOCAL RUNNING */}
-          <section className="p-6 pt-0 border-t border-[#1c1c20] mt-4">
-            <PythonInstructions />
-          </section>
-
         </div>
 
         {/* RIGHT COLUMN COMPONENT: SESSION SEGMENTS BALL-BY-BALL LIST */}
@@ -4231,11 +3759,11 @@ const extractVideoSegmentDirect = (
             </div>
           </div>
 
-          {/* Interactive tabs bar for sequential clips vs scorecard */}
+          {/* Interactive tabs bar for sequential clips vs CLI */}
           <div className="flex bg-[#07070a] border-b border-[#1f1f24] p-1 font-sans text-[10.5px] gap-1 overflow-x-auto">
             <button
               onClick={() => setSidebarTab("clips")}
-              className={`px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+              className={`flex-1 px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                 sidebarTab === "clips"
                   ? "bg-emerald-600 text-white shadow-md border border-emerald-500"
                   : "text-[#717178] hover:text-white hover:bg-[#121217]"
@@ -4244,18 +3772,8 @@ const extractVideoSegmentDirect = (
               🎥 Clips
             </button>
             <button
-              onClick={() => setSidebarTab("scorecard")}
-              className={`px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                sidebarTab === "scorecard"
-                  ? "bg-emerald-600 text-white shadow-md border border-emerald-500"
-                  : "text-[#717178] hover:text-white hover:bg-[#121217]"
-              }`}
-            >
-              📊 Stats
-            </button>
-            <button
               onClick={() => setSidebarTab("library")}
-              className={`px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer relative whitespace-nowrap ${
+              className={`flex-1 px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer relative whitespace-nowrap ${
                 sidebarTab === "library"
                   ? "bg-emerald-600 text-white shadow-md border border-emerald-500"
                   : "text-[#717178] hover:text-white hover:bg-[#121217]"
@@ -4270,7 +3788,7 @@ const extractVideoSegmentDirect = (
             </button>
             <button
               onClick={() => setSidebarTab("pro")}
-              className={`px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+              className={`flex-1 px-1.5 py-1.5 rounded-lg font-bold tracking-tight transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                 sidebarTab === "pro"
                   ? "bg-emerald-600 text-white shadow-md border border-emerald-500"
                   : "text-[#717178] hover:text-white hover:bg-[#121217]"
@@ -4307,420 +3825,9 @@ const extractVideoSegmentDirect = (
             </label>
           </div>
 
-          {/* Innings Selection Controls */}
-          <div className="px-4 py-2.5 bg-[#121217] border-b border-[#1f1f24] flex items-center justify-between text-xs gap-3">
-            <span className="text-white font-semibold">🏏 Filter Innings</span>
-            <div className="flex bg-[#202026] rounded-md p-1 border border-[#2d2d34] text-[10px]">
-              <button
-                onClick={() => setInningsFilter("all")}
-                className={`px-2.5 py-1 rounded-md transition-all font-mono font-bold cursor-pointer ${inningsFilter === "all" ? "bg-emerald-600 text-white shadow" : "text-[#717178] hover:text-[#d1d1d6]"}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setInningsFilter("1")}
-                className={`px-2.5 py-1 rounded-md transition-all font-mono font-bold cursor-pointer ${inningsFilter === "1" ? "bg-emerald-600 text-white shadow" : "text-[#717178] hover:text-[#d1d1d6]"}`}
-              >
-                1st Innings
-              </button>
-              <button
-                onClick={() => setInningsFilter("2")}
-                className={`px-2.5 py-1 rounded-md transition-all font-mono font-bold cursor-pointer ${inningsFilter === "2" ? "bg-emerald-600 text-white shadow" : "text-[#717178] hover:text-[#d1d1d6]"}`}
-              >
-                2nd Innings
-              </button>
-            </div>
-          </div>
 
-          {/* Scorecard Widget View or Sequential Clips List */}
-          {sidebarTab === "scorecard" && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-              
-              {/* 1. BATSMAN LEADERBOARD */}
-              <div className="bg-[#09090c] rounded-xl border border-[#2a2a2e]/60 p-3.5 space-y-3 shadow-inner">
-                <div className="flex justify-between items-center border-b border-[#1f1f24] pb-2">
-                  <span className="text-[10px] text-emerald-400 font-mono font-bold tracking-widest uppercase">Batsman Scorecard Card</span>
-                  <span className="text-[9px] text-[#717178] font-mono">Real-time Slices</span>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-[#a1a1a6] font-sans">
-                    <thead>
-                      <tr className="text-[9px] text-[#717178] border-b border-[#18181c] uppercase font-mono">
-                        <th className="py-1 font-semibold">Batter</th>
-                        <th className="py-1 text-right font-semibold">R</th>
-                        <th className="py-1 text-right font-semibold">B</th>
-                        <th className="py-1 text-right font-semibold">4s</th>
-                        <th className="py-1 text-right font-semibold">6s</th>
-                        <th className="py-1 text-right font-semibold">SR</th>
-                        <th className="py-1 text-right font-semibold">Clips</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#18181c]/40 font-mono text-[11px]">
-                      {(() => {
-                        const batsmenStats = Array.from(new Set(visibleDeliveries.map(d => d.batsman || "Unknown Batsman"))).map(name => {
-                          const faced = visibleDeliveries.filter(d => (d.batsman || "Unknown Batsman") === name);
-                          const runs = faced.reduce((sum, d) => sum + d.runs, 0);
-                          const balls = faced.length;
-                          const fours = faced.filter(d => d.runs === 4).length;
-                          const sixes = faced.filter(d => d.runs === 6).length;
-                          const sr = balls > 0 ? Math.round((runs / balls) * 100) : 0;
-                          const isOut = faced.some(d => d.wicket);
-                          const dismissingDelivery = faced.find(d => d.wicket);
-                          let statusPhrase = "not out";
-                          if (isOut) {
-                            statusPhrase = dismissingDelivery && dismissingDelivery.bowler 
-                              ? `c & b ${dismissingDelivery.bowler.split(' ').pop() || "Bowler"}`
-                              : "out";
-                          }
-                          return { name, runs, balls, fours, sixes, sr, status: statusPhrase, deliveries: faced };
-                        });
 
-                        if (batsmenStats.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={7} className="py-4 text-center text-[#5a5a5e] italic font-sans text-xs">
-                                No batsman deliveries present.
-                              </td>
-                            </tr>
-                          );
-                        }
 
-                        return batsmenStats.map((b, idx) => (
-                          <tr key={idx} className="hover:bg-[#131317]/50 transition-colors">
-                            <td className="py-2.5 font-sans leading-tight">
-                              {editingPlayerName === (b.name as string) ? (
-                                <div className="flex items-center gap-1 my-0.5">
-                                  <input
-                                    type="text"
-                                    value={currentPlayerEditVal}
-                                    onChange={(e) => setCurrentPlayerEditVal(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        handleRenamePlayer(b.name as string, currentPlayerEditVal);
-                                        setEditingPlayerName(null);
-                                      } else if (e.key === "Escape") {
-                                        setEditingPlayerName(null);
-                                      }
-                                    }}
-                                    className="bg-[#050508] border border-emerald-500 rounded px-1 py-0.5 text-[11px] text-white outline-none w-[100px] font-mono"
-                                    autoFocus
-                                  />
-                                  <button
-                                    onClick={() => {
-                                      handleRenamePlayer(b.name as string, currentPlayerEditVal);
-                                      setEditingPlayerName(null);
-                                    }}
-                                    className="px-1.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] cursor-pointer"
-                                    title="Save Rename"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPlayerName(null)}
-                                    className="p-1 text-[#717176] hover:text-white text-[10px] cursor-pointer"
-                                    title="Cancel"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 group select-none">
-                                  <div className="text-white font-semibold leading-none">{b.name as React.ReactNode}</div>
-                                  <button
-                                    onClick={() => {
-                                      setEditingPlayerName(b.name as string);
-                                      setCurrentPlayerEditVal(b.name as string);
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1 py-0.5 rounded text-[8px] uppercase font-bold cursor-pointer hover:bg-emerald-500 hover:text-white"
-                                    title="Align with live scorecard text readout"
-                                  >
-                                    Edit
-                                  </button>
-                                </div>
-                              )}
-                              <div className="text-[9px] text-[#717178] lowercase italic">{b.status}</div>
-                            </td>
-                            <td className="py-2.5 text-right text-white font-bold">{b.runs}</td>
-                            <td className="py-2.5 text-right text-[#717178]">{b.balls}</td>
-                            <td className="py-2.5 text-right">{b.fours}</td>
-                            <td className="py-2.5 text-right">{b.sixes}</td>
-                            <td className="py-2.5 text-right text-emerald-400 font-medium">{b.sr}</td>
-                            <td className="py-2.5 text-right">
-                              {isBulkClipping && activeBulkCollection === `batter_${b.name}` ? (
-                                <span className="text-[10px] text-emerald-400 font-medium animate-pulse">Running ({bulkClippingProgress}%)</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleBulkClipCollection(`batter_${b.name}`, b.deliveries)}
-                                  className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500 hover:text-white transition text-[9px] font-bold flex items-center gap-0.5 ml-auto cursor-pointer"
-                                  title={`Clip all ${b.balls} deliveries faced by ${b.name}`}
-                                >
-                                  <Sparkles className="w-2.5 h-2.5 shrink-0" /> Clip
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 2. BOWLER LEADERBOARD */}
-              <div className="bg-[#09090c] rounded-xl border border-[#2a2a2e]/60 p-3.5 space-y-3 shadow-inner">
-                <div className="flex justify-between items-center border-b border-[#1f1f24] pb-2">
-                  <span className="text-[10px] text-indigo-400 font-mono font-bold tracking-widest uppercase">Bowling Performance</span>
-                  <span className="text-[9px] text-[#717178] font-mono">Over Slices</span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-[#a1a1a6] font-sans">
-                    <thead>
-                      <tr className="text-[9px] text-[#717178] border-b border-[#18181c] uppercase font-mono">
-                        <th className="py-1 font-semibold">Bowler</th>
-                        <th className="py-1 text-right font-semibold">O</th>
-                        <th className="py-1 text-right font-semibold">M</th>
-                        <th className="py-1 text-right font-semibold">R</th>
-                        <th className="py-1 text-right font-semibold">W</th>
-                        <th className="py-1 text-right font-semibold">Econ</th>
-                        <th className="py-1 text-right font-semibold">Clips</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#18181c]/40 font-mono text-[11px]">
-                      {(() => {
-                        const bowlersStats = Array.from(new Set(visibleDeliveries.map(d => d.bowler || "Unknown Bowler"))).map(name => {
-                          const bowled = visibleDeliveries.filter(d => (d.bowler || "Unknown Bowler") === name);
-                          const wickets = bowled.filter(d => d.wicket).length;
-                          const runsConceded = bowled.reduce((sum, d) => sum + d.runs, 0);
-                          const ballsBowled = bowled.length;
-                          
-                          const oversLeftover = ballsBowled % 6;
-                          const oversWhole = Math.floor(ballsBowled / 6);
-                          const oversText = `${oversWhole}.${oversLeftover}`;
-
-                          const oversGrouped = new Map<number, number>();
-                          bowled.forEach(d => {
-                            oversGrouped.set(d.over, (oversGrouped.get(d.over) || 0) + d.runs);
-                          });
-                          let maidens = 0;
-                          oversGrouped.forEach((r) => {
-                            if (r === 0) maidens++;
-                          });
-
-                          const econ = ballsBowled > 0 ? parseFloat(((runsConceded / ballsBowled) * 6).toFixed(2)) : 0.00;
-
-                          return { name, oversText, maidens, runsConceded, wickets, econ, deliveries: bowled };
-                        });
-
-                        if (bowlersStats.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={7} className="py-4 text-center text-[#5a5a5e] italic font-sans text-xs">
-                                No bowler deliveries present.
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        return bowlersStats.map((b, idx) => (
-                          <tr key={idx} className="hover:bg-[#131317]/50 transition-colors">
-                            <td className="py-2.5 font-sans leading-tight">
-                              {editingPlayerName === (b.name as string) ? (
-                                <div className="flex items-center gap-1 my-0.5">
-                                  <input
-                                    type="text"
-                                    value={currentPlayerEditVal}
-                                    onChange={(e) => setCurrentPlayerEditVal(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        handleRenamePlayer(b.name as string, currentPlayerEditVal);
-                                        setEditingPlayerName(null);
-                                      } else if (e.key === "Escape") {
-                                        setEditingPlayerName(null);
-                                      }
-                                    }}
-                                    className="bg-[#050508] border border-indigo-500 rounded px-1 py-0.5 text-[11px] text-white outline-none w-[100px] font-mono"
-                                    autoFocus
-                                  />
-                                  <button
-                                    onClick={() => {
-                                      handleRenamePlayer(b.name as string, currentPlayerEditVal);
-                                      setEditingPlayerName(null);
-                                    }}
-                                    className="px-1.5 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] cursor-pointer"
-                                    title="Save Rename"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPlayerName(null)}
-                                    className="p-1 text-[#717176] hover:text-white text-[10px] cursor-pointer"
-                                    title="Cancel"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 group select-none">
-                                  <div className="text-white font-semibold leading-none">{b.name as React.ReactNode}</div>
-                                  <button
-                                    onClick={() => {
-                                      setEditingPlayerName(b.name as string);
-                                      setCurrentPlayerEditVal(b.name as string);
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-500/10 text-indigo-400 border border-indigo-500/25 px-1 py-0.5 rounded text-[8px] uppercase font-bold cursor-pointer hover:bg-indigo-500 hover:text-white"
-                                    title="Align with live scorecard text readout"
-                                  >
-                                    Edit
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-2.5 text-right text-white font-medium">{b.oversText}</td>
-                            <td className="py-2.5 text-right">{b.maidens}</td>
-                            <td className="py-2.5 text-right">{b.runsConceded}</td>
-                            <td className="py-2.5 text-right text-emerald-400 font-bold">{b.wickets}</td>
-                            <td className="py-2.5 text-right text-indigo-400">{b.econ}</td>
-                            <td className="py-2.5 text-right">
-                              {isBulkClipping && activeBulkCollection === `bowler_${b.name}` ? (
-                                <span className="text-[10px] text-indigo-400 font-medium animate-pulse">Running ({bulkClippingProgress}%)</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleBulkClipCollection(`bowler_${b.name}`, b.deliveries)}
-                                  className="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 hover:bg-indigo-500 hover:text-white transition text-[9px] font-bold flex items-center gap-0.5 ml-auto cursor-pointer"
-                                  title={`Clip all ${b.deliveries.length} balls bowled by ${b.name}`}
-                                >
-                                  <Sparkles className="w-2.5 h-2.5 shrink-0" /> Clip
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 3. DYNAMIC OVER & BALL MATRIX GRID */}
-              <div className="bg-[#09090c] rounded-xl border border-[#2a2a2e]/60 p-3.5 space-y-3 shadow-inner">
-                <div className="flex justify-between items-center border-b border-[#1f1f24] pb-2">
-                  <span className="text-[10px] text-amber-500 font-mono font-bold tracking-widest uppercase">Overs & Ball Timeline</span>
-                  <span className="text-[9px] text-emerald-400 font-mono flex items-center gap-1 animate-pulse">
-                    🎬 Click green Arrow to Segment clip
-                  </span>
-                </div>
-
-                <div className="bg-[#131219]/60 rounded-lg p-2.5 border border-[#201f2b]/60 text-[10.5px] text-[#a1a1a6] leading-relaxed font-sans shadow-sm">
-                  💡 <strong className="text-emerald-400 font-semibold">Where is the Generate Clips Button?</strong>
-                  <div className="mt-1 space-y-1 pl-1 text-[#8b8b92]">
-                    <p>• <strong className="text-slate-300">Method A (Scorecard):</strong> Click the small green <strong className="text-emerald-400 font-bold font-mono">⬇️ arrow</strong> on the top-right of any ball circle below.</p>
-                    <p>• <strong className="text-slate-300">Method B (Clips Menu):</strong> Go to the <strong className="text-emerald-400">🎥 Clips Menu</strong> tab and click the <strong className="text-emerald-400 font-bold font-mono">Clip X.Y</strong> button on any delivery list card.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {(() => {
-                    const oversGroupedMap = new Map<number, Delivery[]>();
-                    visibleDeliveries.forEach(d => {
-                      const arr = oversGroupedMap.get(d.over) || [];
-                      arr.push(d);
-                      oversGroupedMap.set(d.over, arr);
-                    });
-                    
-                    const sortedOvers = Array.from(oversGroupedMap.keys()).sort((a,b) => a-b);
-
-                    if (sortedOvers.length === 0) {
-                      return (
-                        <div className="py-4 text-center text-[#5a5a5e] italic text-xs">
-                          No over telemetry maps loaded.
-                        </div>
-                      );
-                    }
-
-                    return sortedOvers.map((overNum) => {
-                      const balls = (oversGroupedMap.get(overNum) || []).sort((a,b) => a.ball - b.ball);
-                      return (
-                        <div key={overNum} className="space-y-2 p-3 bg-[#131219]/40 rounded-lg border border-[#1e1e24]/70">
-                          <div className="flex justify-between items-center text-[10px] font-mono text-[#717178]">
-                            <span className="font-semibold text-slate-300">Over {overNum}</span>
-                            <span className="text-emerald-500 font-semibold">{balls.length} Deliveries</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-6 gap-2">
-                            {balls.map((delivery, dIdx) => {
-                              const isSelected = selectedDelivery?.over === delivery.over && selectedDelivery?.ball === delivery.ball;
-                              const isWicket = delivery.wicket;
-                              const isFour = delivery.runs === 4;
-                              const isSix = delivery.runs === 6;
-                              
-                              let badgeBg = "bg-[#181820] hover:bg-[#20202d] text-slate-300 border-[#2b2b3a]";
-                              let markerLabel = `${delivery.runs}`;
-                              if (isWicket) {
-                                  badgeBg = "bg-red-950/90 hover:bg-red-900 border-red-500/40 text-red-400";
-                                  markerLabel = "W";
-                              } else if (isFour) {
-                                  badgeBg = "bg-amber-950/90 hover:bg-amber-950 border-amber-500/40 text-amber-400";
-                                  markerLabel = "4";
-                              } else if (isSix) {
-                                  badgeBg = "bg-orange-950/90 hover:bg-orange-950 border-orange-500/40 text-orange-400";
-                                  markerLabel = "6";
-                              } else if (delivery.runs === 0) {
-                                  markerLabel = "•";
-                              }
-
-                              const valKey = `${delivery.over}_${delivery.ball}`;
-                              const clipStatus = clippingStatus[valKey];
-
-                              return (
-                                <div key={dIdx} className="relative group">
-                                  <button
-                                    onClick={() => selectBallDelivery(delivery)}
-                                    className={`w-full aspect-square rounded-full border text-xs font-mono font-bold flex flex-col items-center justify-center transition-all cursor-pointer ${badgeBg} ${
-                                      isSelected ? "ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#09090c] scale-105" : ""
-                                    }`}
-                                    title={`Ball ${delivery.over}.${delivery.ball}: Bowler ${delivery.bowler} to Batsman ${delivery.batsman} - outcome ${delivery.ballOutcome}`}
-                                  >
-                                    <span>{markerLabel}</span>
-                                  </button>
-                                  
-                                  {/* Hover/Group tooltip floating action download tag - PERSISTENTLY VISIBLE */}
-                                  <div className="absolute -top-1 -right-1 z-10">
-                                    {clipStatus ? (
-                                      <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center border border-emerald-400">
-                                        <span className="w-1.5 h-1.5 rounded-full border border-white border-t-transparent animate-spin"></span>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          startClippingBall(delivery);
-                                        }}
-                                        className="w-4 h-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center border border-emerald-400/30 hover:border-emerald-400 shadow active:scale-95 transition-all cursor-pointer"
-                                        title={delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Generate & save practice clip" : `Generate & save clip Over ${delivery.over}.${delivery.ball}`}
-                                      >
-                                        <Download className="w-2.5 h-2.5" />
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  <div className="text-[8px] text-[#5b5b60] text-center mt-1 font-mono">
-                                    {delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Trial" : `.${delivery.ball}`}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-            </div>
-          )}
 
           {sidebarTab === "clips" && (
             /* Sliced clips index original checklist sequential list */
@@ -4800,7 +3907,7 @@ const extractVideoSegmentDirect = (
                           className="flex items-center gap-1.5 text-[10px] font-sans font-semibold text-white hover:text-emerald-400 bg-emerald-600/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg border border-emerald-500/20 active:scale-95 transition-all cursor-pointer shadow-sm shadow-emerald-500/5 hover:border-emerald-400/50"
                           title="Downloads this bowler-to-batsman delivery as an individual sequential MP4 clip"
                         >
-                          <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Practice Clip" : `Clip ${delivery.over}.${delivery.ball}`}
+                          <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Practice Clip" : `Clip ${Math.max(0, delivery.over - 1)}.${delivery.ball}`}
                         </button>
                       )}
                     </div>
