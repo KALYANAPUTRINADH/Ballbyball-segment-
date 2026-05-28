@@ -1,0 +1,20 @@
+211:  const [sidebarTab, setSidebarTab] = useState<"clips" | "scorecard" | "library" | "pro">("clips");
+258:  // Simple states to allow overriding/adjusting scorecard player names dynamically
+320:      `[${new Date().toLocaleTimeString()}] [RENAME] Replaced player "${cleanOld}" with "${cleanNew}" on live scorecard timeline.`,
+1377:        finalDescription = `Analytical scorecard wide radar detected: delivery strayed outside the visual crease line guides. Match scorecard updated sequentially.`;
+1787:      // The scorecard updates AFTER the ball is fully completed, so we must buffer backwards
+2041:      // Sync active ball/scorecard to match current playback time
+2048:          // Sync selected delivery if it has changed, ensuring scorecard and clips list stay highlighted in sync with current playback frame
+2741:                        id="scorecard-ocr-roi-box"
+3072:                          Detected <strong className="text-emerald-400 font-semibold">{selectedMatch.deliveries.length}</strong> sequential deliveries based on temporal scorecards and release keyframes. Create separate clips in high fidelity.
+3106:              <div id="ocr-scorecard-calibration-rack" className="border-t border-[#1f1f24] bg-[#0c0c10] p-5 font-sans">
+3119:                      Extract clips frame-accurately whenever the team score or over digit transitions inside the scorecard ROI
+3253:                      title={isBatchOcrGenerating ? "Generating sequential clips..." : "Generate clips ball by ball from videometadata scorecard only starting from ball one, stripping replays and breaks"}
+3370:                        title="Auto-scan frame color-histogram contrast to suggest optimal ROI scorecard coordinates"
+4174:          {/* Interactive tabs bar for sequential clips vs scorecard */}
+4187:              onClick={() => setSidebarTab("scorecard")}
+4189:                sidebarTab === "scorecard"
+4276:          {sidebarTab === "scorecard" && (
+4376:                                    title="Align with live scorecard text readout"
+4513:                                    title="Align with live scorecard text readout"
+4928:                      Standard match play mode. Segments comply with official scorecard updates sequentially.

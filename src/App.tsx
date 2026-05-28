@@ -360,7 +360,15 @@ const extractVideoSegmentDirect = (
   };
 
   const registerExtractedClip = (delivery: Delivery, url: string, extension: string = "mp4") => {
-    const clipName = `Scorecard_Over_${delivery.over}_Ball_${delivery.ball}.${extension}`;
+    let clipName = `Scorecard_Over_${delivery.over}_Ball_${delivery.ball}.${extension}`;
+    const descLower = (delivery.description || "").toLowerCase();
+    const outcomeLower = (delivery.ballOutcome || "").toLowerCase();
+    const isPracticeLocal = !!delivery.isPractice || outcomeLower.includes("practice") || descLower.includes("practice");
+    
+    if (isPracticeLocal) {
+      clipName = `Practice_Delivery_${Math.round(delivery.startTime)}s.${extension}`;
+    }
+
     setExtractedClips(prev => {
       const filtered = prev.filter(c => !(c.over === delivery.over && c.ball === delivery.ball));
       return [
@@ -465,8 +473,11 @@ const extractVideoSegmentDirect = (
           replayStart: baseOffset + 11.0,
           replayEnd: baseOffset + 17.5,
           visualMarkers: [
-            { time: bowlerReleaseTime, label: "Live Release Sync", type: "bowler_release" },
-            { time: batsmanHitTime, label: "Live Strike Impact", type: "batsman_hit" }
+            { time: Math.max(0, bowlerReleaseTime - 3.5), label: "Bowler Runup", type: "info" },
+            { time: bowlerReleaseTime, label: "Ball Release", type: "bowler_release" },
+            { time: bowlerReleaseTime + 0.3, label: "Ball Pitching", type: "info" },
+            { time: batsmanHitTime, label: "Shot", type: "batsman_hit" },
+            { time: batsmanHitTime + 3.0, label: "Scorecard Update", type: "info" }
           ]
         };
 
@@ -519,8 +530,11 @@ const extractVideoSegmentDirect = (
           cameraAngles: ["Tactical Tracker", "Bowler Side Zoom"],
           hasReplay: false,
           visualMarkers: [
-            { time: 8.5, label: "Live Release", type: "bowler_release" },
-            { time: 9.2, label: "Contact Frame", type: "batsman_hit" }
+            { time: Math.max(0, 8.5 - 3.5), label: "Bowler Runup", type: "info" },
+            { time: 8.5, label: "Ball Release", type: "bowler_release" },
+            { time: 8.5 + 0.3, label: "Ball Pitching", type: "info" },
+            { time: 9.2, label: "Shot", type: "batsman_hit" },
+            { time: 9.2 + 3.0, label: "Scorecard Update", type: "info" }
           ]
         }
       ]
@@ -557,7 +571,7 @@ const extractVideoSegmentDirect = (
   // Helper to standardise clip names based on innings, over, ball, and outcomes (wide, noball, practice)
   const getClipFilename = (d: Delivery, ext: string = "mp4"): string => {
     const inningsVal = d.innings || (selectedMatch && d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
-    const inningsPrefix = inningsVal === 2 ? "2nd_Innings" : "1st_Innings";
+    const inningsPrefix = inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings";
     const overBall = `${d.over}.${d.ball}`;
     
     let suffix = "";
@@ -590,50 +604,19 @@ const extractVideoSegmentDirect = (
     let cleanStart = d.startTime;
     let cleanEnd = d.endTime;
 
-    // 1. Remove replays: if marked as having replay, slice strictly up to replayStart!
-    if (d.hasReplay && d.replayStart && d.replayStart > d.startTime) {
-      cleanEnd = d.replayStart - 0.2;
+    if (d.bowlerReleaseTime && d.batsmanHitTime) {
+      // 1. Bowler Runup (Starts around 3.8s before release depending on angle)
+      cleanStart = Math.max(d.startTime, d.bowlerReleaseTime - 3.8); 
+      // 5. Scorecard Update (Scorecard update happens typically 3 to 4 seconds after hit)
+      cleanEnd = Math.min(d.endTime, d.batsmanHitTime + 3.5); 
+    } else if (d.bowlerReleaseTime) {
+      cleanStart = Math.max(d.startTime, d.bowlerReleaseTime - 3.8);
+      cleanEnd = Math.min(d.endTime, d.bowlerReleaseTime + 4.5);
     }
 
-    // 2. Multi-perspective camera angle calibration:
-    const angle = getCameraAngleForDelivery(d);
-    let leadTime = 3.0; // standard seconds before release
-    let tailTime = 6.0; // standard seconds after batsman contact
-    
-    if (angle === "wide shot") {
-      // Wide shot requires capturing the bowler's full lengthy run-up and release stride accurately
-      leadTime = 4.2; 
-    } else if (angle === "close-up") {
-      // Close-up focuses strictly on bowler's wrist release and crease action; shorter lead is optimal to avoid pre-ball gaps
-      leadTime = 2.0;
-    } else if (angle === "follow-the-ball") {
-      // Follow-the-ball angle covers tracking panning, needing slightly more lead to transition seamlessly
-      leadTime = 3.2;
-    }
-
-    // 3. Remove pre/post ball idle padding (commentary, ad transitions, audience panning)
-    if (d.bowlerReleaseTime) {
-      cleanStart = Math.max(d.startTime, d.bowlerReleaseTime - leadTime);
-      
-      // Determine suitable padding post batsman contact based on the outcome and camera focus
-      const outcome = (d.ballOutcome || "").toLowerCase();
-      const isWicket = d.wicket || outcome.includes("wicket") || outcome.includes("out");
-      const isBoundary = (d.runs && d.runs >= 4) || outcome.includes("4 runs") || outcome.includes("6 runs") || outcome.includes("four") || outcome.includes("six");
-      
-      if (isWicket || isBoundary) {
-        // follow-the-ball zoom pan needs longer to capture outfield tracking of shots & celebrations
-        tailTime = angle === "follow-the-ball" ? 15.5 : 13.5; 
-      } else if (d.runs && d.runs > 0) {
-        tailTime = angle === "follow-the-ball" ? 10.0 : 8.5;  // sprint running capture
-      } else {
-        tailTime = angle === "close-up" ? 5.2 : 6.0;         // quick dot ball recovery
-      }
-
-      if (d.batsmanHitTime) {
-        cleanEnd = Math.min(cleanEnd, d.batsmanHitTime + tailTime);
-      } else {
-        cleanEnd = Math.min(cleanEnd, d.bowlerReleaseTime + (tailTime + 1.0));
-      }
+    // Always strip replays directly
+    if (d.hasReplay && d.replayStart && d.replayStart > cleanStart) {
+      cleanEnd = Math.min(cleanEnd, d.replayStart - 0.2);
     }
 
     // Safeguard to guarantee valid duration
@@ -784,12 +767,13 @@ const extractVideoSegmentDirect = (
     setIsBulkClipping(true);
     setBulkClippingProgress(0);
 
+    let prevScoreOverBallOut = "";
     const targetDeliveries = selectedMatch.deliveries.filter(d => {
       const descLower = (d.description || "").toLowerCase();
       const outcomeLower = (d.ballOutcome || "").toLowerCase();
       
       const isReplaySeq = d.hasReplay || outcomeLower.includes("replay") || descLower.includes("replay");
-      if (excludeReplays && isReplaySeq) return false;
+      if (isReplaySeq) return false;
       
       const isAd = descLower.includes("ad break") || outcomeLower.includes("ad break") || descLower.includes("commercial");
       if (isAd) return false;
@@ -799,6 +783,14 @@ const extractVideoSegmentDirect = (
       
       const isNotUpdated = descLower.includes("not updated") || descLower.includes("dead ball");
       if (isNotUpdated) return false;
+      
+      const isCrowd = descLower.includes("crowd") || outcomeLower.includes("crowd");
+      if (isCrowd) return false;
+
+      // Reject any clip that does NOT update the scorecard explicitly
+      const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}`;
+      if (scoreStateStr === prevScoreOverBallOut) return false;
+      prevScoreOverBallOut = scoreStateStr;
       
       return true;
     });
@@ -900,8 +892,12 @@ const extractVideoSegmentDirect = (
       const folderName = `creaseai_${selectedMatch.id || "match"}_clips`;
       const zipFolder = zip.folder(folderName);
       
-      const firstInningsFolder = zipFolder?.folder("first_innings");
-      const secondInningsFolder = zipFolder?.folder("second_innings");
+      const foldersAll: Record<string, typeof zipFolder> = {
+        "1": zipFolder?.folder("innings1"),
+        "2": zipFolder?.folder("innings2"),
+        "3": zipFolder?.folder("superoverinnings1"),
+        "4": zipFolder?.folder("superoverinnings2"),
+      };
       
       const stepIncrement = 50 / targetDeliveries.length;
       
@@ -932,7 +928,7 @@ const extractVideoSegmentDirect = (
         const clipName = getClipFilename(delivery, clipExtension);
         
         const inningsVal = delivery.innings || (delivery.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
-        const targetSubFolder = inningsVal === 2 ? secondInningsFolder : firstInningsFolder;
+        const targetSubFolder = foldersAll[String(inningsVal)] || foldersAll["1"];
         targetSubFolder?.file(clipName, slicedBlob);
         
         setZipProgress(Math.min(85, Math.round(35 + (i + 1) * stepIncrement)));
@@ -1027,6 +1023,7 @@ const extractVideoSegmentDirect = (
       const zip = new JSZip();
       
       // Filter deliveries based on parameters
+      let prevScoreOverBallOut = "";
       const targetDeliveries = selectedMatch.deliveries.filter(d => {
         // Over range
         if (d.over < exportRangeStart || d.over > exportRangeEnd) return false;
@@ -1039,11 +1036,11 @@ const extractVideoSegmentDirect = (
                        outcomeLower.includes("practice") || outcomeLower.includes("trial") ||
                        descLower.includes("practice") ||
                        descLower.includes("warm-up");
-        if (zipExcludePractice && isPractice) return false;
+        if (isPractice) return false;
         
         // Replay filter
         const isReplay = d.hasReplay || outcomeLower.includes("replay") || descLower.includes("replay");
-        if (zipExcludeReplays && isReplay) return false;
+        if (isReplay) return false;
         
         // Exclude Ads and Not Updated Scorecard clips explicitly for precise clips
         const isAd = descLower.includes("ad break") || outcomeLower.includes("ad break") || descLower.includes("commercial");
@@ -1051,6 +1048,14 @@ const extractVideoSegmentDirect = (
         
         const isNotUpdated = descLower.includes("not updated") || descLower.includes("dead ball");
         if (isNotUpdated) return false;
+
+        const isCrowd = descLower.includes("crowd") || outcomeLower.includes("crowd");
+        if (isCrowd) return false;
+
+        // Reject any clip that does NOT update the scorecard explicitly
+        const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}`;
+        if (scoreStateStr === prevScoreOverBallOut) return false;
+        prevScoreOverBallOut = scoreStateStr;
 
         return true;
       });
@@ -1071,8 +1076,12 @@ const extractVideoSegmentDirect = (
       const folderName = `creaseai_overs_${exportRangeStart}_to_${exportRangeEnd}_clips`;
       const zipFolder = zip.folder(folderName);
       
-      const firstInningsFolder = zipFolder?.folder("first_innings");
-      const secondInningsFolder = zipFolder?.folder("second_innings");
+      const foldersRange: Record<string, typeof zipFolder> = {
+        "1": zipFolder?.folder("innings1"),
+        "2": zipFolder?.folder("innings2"),
+        "3": zipFolder?.folder("superoverinnings1"),
+        "4": zipFolder?.folder("superoverinnings2"),
+      };
       
       const stepIncrement = 50 / targetDeliveries.length;
       
@@ -1103,7 +1112,7 @@ const extractVideoSegmentDirect = (
         const clipName = getClipFilename(delivery, clipExtension);
         
         const inningsVal = delivery.innings || (delivery.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
-        const targetSubFolder = inningsVal === 2 ? secondInningsFolder : firstInningsFolder;
+        const targetSubFolder = foldersRange[String(inningsVal)] || foldersRange["1"];
         targetSubFolder?.file(clipName, slicedBlob);
         
         setZipProgress(Math.min(85, Math.round(35 + (i + 1) * stepIncrement)));
@@ -1273,6 +1282,7 @@ const extractVideoSegmentDirect = (
     let lastOver = selectedMatch.id.startsWith("custom_") ? simulatedOver : 1;
     if (lastOver < 1) lastOver = 1;
     let lastBall = 0; // Starts from 0, so next ball is ball 1 sequentially
+    let sequenceCounter = 0;
     let currentTimeCursor = 1.0;
 
     // Determine typical bowler and batsman names to keep it realistic
@@ -1317,13 +1327,7 @@ const extractVideoSegmentDirect = (
         break; // Stop when we are too close to the post-match zone
       }
 
-      // Increment ball or over sequential order starting ball one
-      if (lastBall >= 6) {
-        lastOver += 1;
-        lastBall = 1;
-      } else {
-        lastBall += 1;
-      }
+      sequenceCounter++;
 
       const bowlerReleaseTime = ballStartTime + 4.5;
       const batsmanHitTime = ballStartTime + 5.2;
@@ -1332,22 +1336,41 @@ const extractVideoSegmentDirect = (
       const runsChoices = [0, 4, 1, 0, 6, 2, 0, 1];
       const wicketChoices = [false, false, false, false, false, false, true, false];
       
-      const seedIndex = (lastOver * 6 + lastBall) % runsChoices.length;
+      const seedIndex = sequenceCounter % runsChoices.length;
       const runs = runsChoices[seedIndex];
       const wicket = runs === 0 ? wicketChoices[seedIndex] : false;
       
-      // Every 5th ball represents a "practice/warmup" ball to satisfy criteria
-      const isPractice = (lastOver * 6 + lastBall) % 5 === 4;
+      // Pure scorecard OCR detection doesn't detect practice deliveries because they don't update the scorecard
+      const isPractice = false;
 
       // Wide and No ball outcomes (ensuring exclusive check from practice)
-      const isWide = !isPractice && (lastOver * 6 + lastBall) % 8 === 2;
-      const isNoBall = !isPractice && !isWide && (lastOver * 6 + lastBall) % 11 === 3;
+      const isWide = !isPractice && sequenceCounter % 8 === 2;
+      const isNoBall = !isPractice && !isWide && sequenceCounter % 11 === 3;
       
       // Determine if it has a broadcast replay (only for boundaries or wickets, not practice, wide, no ball)
-      const isReplay = !isPractice && !isWide && !isNoBall && (runs >= 4 || wicket) && (lastOver * 6 + lastBall) % 3 === 1;
+      const isReplay = !isPractice && !isWide && !isNoBall && (runs >= 4 || wicket) && sequenceCounter % 3 === 1;
+
+      // Increment ball or over sequential order ONLY for real deliveries (starting ball one)
+      let currentBallInOver = lastBall;
+      let currentOver = lastOver;
+      
+      if (!isPractice && !isWide && !isNoBall) {
+        if (lastBall >= 6) {
+          lastOver += 1;
+          lastBall = 1;
+        } else {
+          lastBall += 1;
+        }
+        currentBallInOver = lastBall;
+        currentOver = lastOver;
+      } else {
+        // If it's a wide/no ball/practice, and it's the first ball of the over, keep it as ball 0 (or 1 depending on display prefs)
+        currentBallInOver = Math.max(1, lastBall); 
+        currentOver = lastOver;
+      }
 
       // Assign rotating camera perspective to ensure camera adaptation
-      const cameraSeed = lastBall % 3;
+      const cameraSeed = sequenceCounter % 3;
       const cameraAngleChoice = cameraSeed === 0 
         ? "Wide Shot (Tactical)" 
         : cameraSeed === 1 
@@ -1359,7 +1382,7 @@ const extractVideoSegmentDirect = (
       let ballOutcome = "Dot Ball";
       let finalRuns = isPractice ? 0 : runs;
       let finalWicket = isPractice ? false : wicket;
-      let finalDescription = `Automatic OCR boundary segmented delivery. Over ${lastOver}.${lastBall} detected cleanly. Scorecard overs advanced sequentially.`;
+      let finalDescription = `Automatic OCR boundary segmented delivery. Over ${currentOver}.${currentBallInOver} detected cleanly. Scorecard overs advanced sequentially.`;
 
       if (isPractice) {
         ballOutcome = "Practice Delivery (No-Score Runs)";
@@ -1385,8 +1408,8 @@ const extractVideoSegmentDirect = (
       }
 
       const deliveryPayload: Delivery = {
-        over: lastOver,
-        ball: lastBall,
+        over: currentOver,
+        ball: currentBallInOver,
         startTime: ballStartTime,
         endTime: ballEndTime,
         bowlerReleaseTime: bowlerReleaseTime,
@@ -1407,8 +1430,11 @@ const extractVideoSegmentDirect = (
         isNoBall: isNoBall,
         innings: currentInningsValue,
         visualMarkers: ([
-          { time: bowlerReleaseTime, label: "Live Release Sync", type: "bowler_release" as const },
-          { time: batsmanHitTime, label: "Live Strike Impact", type: "batsman_hit" as const }
+          { time: Math.max(0, bowlerReleaseTime - 3.5), label: "Bowler Runup", type: "info" as const },
+          { time: bowlerReleaseTime, label: "Ball Release", type: "bowler_release" as const },
+          { time: bowlerReleaseTime + 0.3, label: "Ball Pitching", type: "info" as const },
+          { time: batsmanHitTime, label: "Shot", type: "batsman_hit" as const },
+          { time: batsmanHitTime + 3.0, label: "Scorecard Update", type: "info" as const }
         ] as VisualMarker[]).concat(isReplay ? [{ time: ballStartTime + 11.0, label: "Slo-mo replay sequence", type: "replay_start" as const }] : [])
       };
 
@@ -3141,6 +3167,11 @@ const extractVideoSegmentDirect = (
                       onClick={async () => {
                         if (!selectedMatch || isBatchOcrGenerating) return;
                         
+                        if (!ocrEnabled) {
+                          alert("Please Activate Live OCR Scanner first to detect the region of interest for overs.");
+                          return;
+                        }
+
                         setIsBatchOcrGenerating(true);
                         setOcrProgressPercent(0);
                         setOcrProgressText("Reading video metadata...");
@@ -3149,6 +3180,7 @@ const extractVideoSegmentDirect = (
                         setOcrLogs(prev => [log, ...prev]);
 
                         const rawDeliveries = selectedMatch?.deliveries || [];
+                        let prevScoreOverBallOut = "";
                         const deliveriesToProcess = rawDeliveries.filter((d) => {
                           const descLower = (d.description || "").toLowerCase();
                           const outcomeLower = (d.ballOutcome || "").toLowerCase();
@@ -3164,6 +3196,14 @@ const extractVideoSegmentDirect = (
                           
                           const isNotUpdated = descLower.includes("not updated") || descLower.includes("dead ball");
                           if (isNotUpdated) return false;
+
+                          const isCrowd = descLower.includes("crowd") || outcomeLower.includes("crowd");
+                          if (isCrowd) return false;
+                          
+                          // Reject any clip that does NOT update the scorecard explicitly
+                          const scoreStateStr = `${d.over}.${d.ball}_${d.runs}_${d.wicket}`;
+                          if (scoreStateStr === prevScoreOverBallOut) return false;
+                          prevScoreOverBallOut = scoreStateStr;
                           
                           return true;
                         });
@@ -3180,6 +3220,15 @@ const extractVideoSegmentDirect = (
                           setIsBatchOcrGenerating(false);
                           return;
                         }
+                        
+                        const zip = new JSZip();
+                        const zipFolder = zip.folder(`ocr_generated_clips_${Date.now()}`);
+                        const foldersOcr: Record<string, typeof zipFolder> = {
+                          "1": zipFolder?.folder("innings1"),
+                          "2": zipFolder?.folder("innings2"),
+                          "3": zipFolder?.folder("superoverinnings1"),
+                          "4": zipFolder?.folder("superoverinnings2"),
+                        };
 
                         // Use a sequential loop to prevent browser overlay bottleneck
                         for (let i = 0; i < total; i++) {
@@ -3196,6 +3245,13 @@ const extractVideoSegmentDirect = (
                           try {
                             const blob = await extractVideoSegmentDirect(selectedMatch.videoUrl, cleanRange.startTime, cleanRange.endTime);
                             const url = URL.createObjectURL(blob);
+                            
+                            const inningsVal = d.innings || (d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
+                            const targetSubFolder = foldersOcr[String(inningsVal)] || foldersOcr["1"];
+                            const clipName = `${inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings"}_Over_${d.over}.${d.ball}.mp4`;
+                            
+                            targetSubFolder?.file(clipName, blob);
+                            
                             const newClip = {
                               id: `ff_ocr_clip_${d.over}_${d.ball}_${Date.now()}`,
                               name: `Over ${d.over}.${d.ball}`,
@@ -3227,9 +3283,22 @@ const extractVideoSegmentDirect = (
                           await new Promise(resolve => setTimeout(resolve, 800));
                         }
 
+                        setOcrProgressPercent(95);
+                        setOcrProgressText("Zipping folders for download...");
+                        
+                        const packedArchive = await zip.generateAsync({ type: "blob" });
+                        
                         setOcrProgressPercent(100);
                         setOcrProgressText("All clips generated successfully!");
                         
+                        const zipUrl = URL.createObjectURL(packedArchive);
+                        const downloadAnchor = document.createElement("a");
+                        downloadAnchor.href = zipUrl;
+                        downloadAnchor.download = `OCR_Match_Clips.zip`;
+                        document.body.appendChild(downloadAnchor);
+                        downloadAnchor.click();
+                        downloadAnchor.remove();
+
                         setTimeout(() => {
                           setIsBatchOcrGenerating(false);
                           setOcrProgressPercent(0);
@@ -4629,7 +4698,7 @@ const extractVideoSegmentDirect = (
                                           startClippingBall(delivery);
                                         }}
                                         className="w-4 h-4 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center border border-emerald-400/30 hover:border-emerald-400 shadow active:scale-95 transition-all cursor-pointer"
-                                        title={`Generate & save clip Over ${delivery.over}.${delivery.ball}`}
+                                        title={delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Generate & save practice clip" : `Generate & save clip Over ${delivery.over}.${delivery.ball}`}
                                       >
                                         <Download className="w-2.5 h-2.5" />
                                       </button>
@@ -4637,7 +4706,7 @@ const extractVideoSegmentDirect = (
                                   </div>
 
                                   <div className="text-[8px] text-[#5b5b60] text-center mt-1 font-mono">
-                                    .{delivery.ball}
+                                    {delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Trial" : `.${delivery.ball}`}
                                   </div>
                                 </div>
                               );
@@ -4731,7 +4800,7 @@ const extractVideoSegmentDirect = (
                           className="flex items-center gap-1.5 text-[10px] font-sans font-semibold text-white hover:text-emerald-400 bg-emerald-600/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg border border-emerald-500/20 active:scale-95 transition-all cursor-pointer shadow-sm shadow-emerald-500/5 hover:border-emerald-400/50"
                           title="Downloads this bowler-to-batsman delivery as an individual sequential MP4 clip"
                         >
-                          <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Clip {delivery.over}.{delivery.ball}
+                          <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {delivery.isPractice || (delivery.ballOutcome && delivery.ballOutcome.toLowerCase().includes("practice")) || (delivery.description && delivery.description.toLowerCase().includes("practice")) ? "Practice Clip" : `Clip ${delivery.over}.${delivery.ball}`}
                         </button>
                       )}
                     </div>

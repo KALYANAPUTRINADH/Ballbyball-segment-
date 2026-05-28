@@ -24,7 +24,7 @@ export interface Delivery {
   replayStart?: number;
   replayEnd?: number;
   visualMarkers?: VisualMarker[];
-  innings?: 1 | 2;
+  innings?: 1 | 2 | 3 | 4 | number;
   isWide?: boolean;
   isNoBall?: boolean;
   isPractice?: boolean;
