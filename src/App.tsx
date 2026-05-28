@@ -470,7 +470,23 @@ const extractVideoSegmentDirect = (
     return `${displayOver}.${d.ball}${suffix}`;
   };
 
-  const getClipFilename = (d: Delivery, ext: string = "mp4"): string => {
+  const getClipFilename = (d: Delivery, passedExt: string = "mp4"): string => {
+    let ext = passedExt;
+    if (customVideoMeta && customVideoMeta.fileName) {
+      const parts = customVideoMeta.fileName.split(".");
+      if (parts.length > 1) {
+        ext = parts.pop() || ext;
+      }
+    } else if (selectedMatch && selectedMatch.videoUrl && !selectedMatch.videoUrl.startsWith("blob:")) {
+      const urlParts = selectedMatch.videoUrl.split(".");
+      if (urlParts.length > 1) {
+        const extLast = urlParts.pop(); const extRaw = extLast ? extLast.split("?")[0].split("#")[0] : ""; // remove query params
+        if (extRaw && extRaw.length <= 4) {
+          ext = extRaw;
+        }
+      }
+    }
+
     const inningsVal = d.innings || (selectedMatch && d.startTime >= selectedMatch.duration * 0.6 ? 2 : 1);
     const inningsPrefix = inningsVal === 4 ? "SuperOver_2" : inningsVal === 3 ? "SuperOver_1" : inningsVal === 2 ? "2nd_Innings" : "1st_Innings";
     
@@ -500,38 +516,21 @@ const extractVideoSegmentDirect = (
     } else if (d.runs >= 4) {
       suffix = "_four";
     }
-    
-    return `${inningsPrefix}_over_${overBall}${suffix}.${ext}`;
+
+    return `${inningsPrefix}_Over_${overBall}${suffix}.${ext}`;
   };
 
-  // Helper to trim and exclude replays, crowd pans, ads, and idle intervals from deliveries
   const getCleanDeliveryTimestamps = (d: Delivery) => {
     let cleanStart = d.startTime;
     let cleanEnd = d.endTime;
 
-    if (d.bowlerReleaseTime && d.batsmanHitTime) {
-      // 1. Bowler Runup (Starts around 3.8s before release depending on angle)
-      cleanStart = Math.max(d.startTime, d.bowlerReleaseTime - 3.8); 
-      // 5. Scorecard Update (Scorecard update happens typically 3 to 4 seconds after hit)
-      cleanEnd = Math.min(d.endTime, d.batsmanHitTime + 3.5); 
-    } else if (d.bowlerReleaseTime) {
-      cleanStart = Math.max(d.startTime, d.bowlerReleaseTime - 3.8);
-      cleanEnd = Math.min(d.endTime, d.bowlerReleaseTime + 4.5);
-    }
+    // Safety padding
+    cleanStart = Math.max(0, cleanStart - 0.5);
+    cleanEnd = cleanEnd + 1.0;
 
-    // Always strip replays directly
-    if (d.hasReplay && d.replayStart && d.replayStart > cleanStart) {
-      cleanEnd = Math.min(cleanEnd, d.replayStart - 0.2);
-    }
-
-    // Safeguard to guarantee valid duration
-    if (cleanEnd <= cleanStart) {
-      cleanEnd = d.endTime;
-      cleanStart = d.startTime;
-    }
     return { startTime: cleanStart, endTime: cleanEnd };
   };
-  
+
   const handleBulkClipCollection = async (collectionTitle: string, targetDeliveries: Delivery[]) => {
     if (targetDeliveries.length === 0) return;
     setIsBulkClipping(true);
