@@ -1,9 +1,11 @@
 {
-  "name": "Cricket Delivery Segmenter",
-  "description": "An AI-powered system designed to process cricket match footage and segment it into individual ball-by-ball video clips using Gemini multimodal analysis, complete with Local VS Code Python runner instructions.",
+  "name": "Streamlify",
+  "description": "An AI-powered cricket scoring and live streaming platform with a Pro notification center for subscription renewal and advanced analytics alerts, live ball-by-ball scoring, tournament management, and video segmentation.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation",
+    "display-capture"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

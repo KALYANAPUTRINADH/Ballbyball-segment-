@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "User Profile",
+      "description": "Core user information and subscription status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "format": "email" },
+        "photo_url": { "type": "string" },
+        "is_pro": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "phone": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
+    },
+    "LookingPost": {
+      "title": "Looking for Team/Player Post",
+      "description": "Community posts for finding teammates",
+      "type": "object",
+      "properties": {
+        "author_id": { "type": "string" },
+        "author_name": { "type": "string" },
+        "author_photo": { "type": "string" },
+        "content": { "type": "string", "maxLength": 1000 },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["team", "player"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["author_id", "content"]
+    },
+    "Transaction": {
+      "title": "Subscription Transaction",
+      "description": "Record of a payment",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "order_id": { "type": "string" },
+        "description": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "amount"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Alert or notification for a user",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "type": { "type": "string", "enum": ["subscription_renewal", "analytics_ready", "system"] },
+        "is_read": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "action_url": { "type": "string" }
+      },
+      "required": ["user_id", "title", "body", "type", "is_read", "created_at"]
+    }
+  },
+  "firestore": {
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications for subscription status and analytics data alerts"
+    },
+    "/profiles/{userId}": {
+      "schema": "Profile",
+      "description": "User profiles indexed by UID"
+    },
+    "/looking_posts/{postId}": {
+      "schema": "LookingPost",
+      "description": "Public community posts"
+    },
+    "/transactions/{txId}": {
+      "schema": "Transaction",
+      "description": "User payment records"
+    },
+    "/performance_stats/{userId}": {
+      "schema": "object",
+      "description": "Player performance metrics"
+    },
+    "/player_stats/{id}": {
+      "schema": "object",
+      "description": "Comprehensive player tournament statistics"
+    },
+    "/community_profiles/{userId}": {
+      "schema": "object",
+      "description": "Public-facing community profile data"
+    },
+    "/teams/{teamId}": {
+      "schema": "object",
+      "description": "Cricket teams"
+    },
+    "/matches/{matchId}": {
+      "schema": "object",
+      "description": "Cricket match records"
+    },
+    "/players/{playerId}": {
+      "schema": "object",
+      "description": "Player directory"
+    },
+    "/tournaments/{tId}": {
+      "schema": "object",
+      "description": "Tournament records"
+    },
+    "/messages/{msgId}": {
+      "schema": "object",
+      "description": "Team chat messages"
+    }
+  }
+}

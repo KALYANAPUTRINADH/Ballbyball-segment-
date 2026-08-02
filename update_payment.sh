@@ -1,0 +1,3 @@
+sed -i -e '/await dbService.update(.profiles., user.uid, { is_pro: true });/c\              const expiryDate = new Date();\n              if (amount === 399 || amount > 100) {\n                expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n              } else {\n                expiryDate.setMonth(expiryDate.getMonth() + 1);\n              }\n              await dbService.update('"'"'profiles'"'"', user.uid, { is_pro: true, pro_expiration_date: expiryDate.toISOString() });' ./src/components/PaymentModal.tsx
+sed -i 's/amount: 49,/amount: amount,/g' ./src/components/PaymentModal.tsx
+sed -i 's/description: .Streamlify Pro Subscription.,/description: description,/g' ./src/components/PaymentModal.tsx

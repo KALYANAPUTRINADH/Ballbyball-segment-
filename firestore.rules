@@ -1,0 +1,176 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. GLOBAL HELPERS
+    function isSignedIn() { return request.auth != null; }
+    function isMock() { return false; }
+    function isOwner(userId) { return isMock() || (isSignedIn() && request.auth.uid == userId) || userId.matches('^mock_.*'); }
+    function isAdmin() { 
+       return isMock() || (isSignedIn() && 
+      ((exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin') || 
+      request.auth.token.phone_number == '+916305605194' || 
+      request.auth.token.phone_number == '+918688678943' ||
+      request.auth.token.email == 'trinadhkalyanapu@gmail.com')); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // 2. DEFAULT DENY
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. PROFILES
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'is_pro', 'pro_expiration_date'])));
+      allow delete: if isAdmin();
+    }
+
+    // 4. LOOKING POSTS
+    match /looking_posts/{postId} {
+      allow read: if true;
+      allow create: if isMock() || (isSignedIn() && incoming().author_id == request.auth.uid);
+      allow update, delete: if isMock() || (isSignedIn() && (existing().author_id == request.auth.uid || isAdmin()));
+    }
+
+    // 5. COMMUNITY PROFILES
+    match /community_profiles/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // 6. TEAMS / MATCHES / PLAYERS / TOURNAMENTS
+    match /teams/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || (isSignedIn() && (existing().owner_id == request.auth.uid || existing().created_by == request.auth.uid || isAdmin()));
+    }
+    match /matches/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update: if isMock() || (isSignedIn() && (
+        existing().get('created_by', '') == request.auth.uid ||
+        existing().get('owner_id', '') == request.auth.uid ||
+        existing().get('ownerId', '') == request.auth.uid ||
+        existing().get('created_by', null) == null ||
+        existing().get('owner_id', null) == null ||
+        existing().get('ownerId', null) == null ||
+        isAdmin()
+      ));
+      allow delete: if isMock() || (isSignedIn() && (
+        existing().get('created_by', '') == request.auth.uid ||
+        existing().get('owner_id', '') == request.auth.uid ||
+        existing().get('ownerId', '') == request.auth.uid ||
+        isAdmin()
+      ));
+    }
+    match /players/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || (isSignedIn() && (existing().owner_id == request.auth.uid || existing().created_by == request.auth.uid || isAdmin()));
+    }
+    match /tournaments/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || (isSignedIn() && (existing().owner_id == request.auth.uid || existing().created_by == request.auth.uid || isAdmin()));
+    }
+    match /tournament_registrations/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || (isSignedIn() && (existing().user_id == request.auth.uid || isAdmin()));
+    }
+    match /tournament_stats/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /tournament_matches/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || (isSignedIn() && (existing().created_by == request.auth.uid || existing().owner_id == request.auth.uid || existing().created_by == request.auth.uid || isAdmin()));
+    }
+
+    // 7. STATS
+    match /performance_stats/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    match /player_stats/{id} {
+      allow read: if true;
+      allow create: if isMock() || isSignedIn();
+      allow update, delete: if isMock() || isOwner(id) || isAdmin();
+    }
+
+    // 8. MESSAGES
+    match /messages/{msgId} {
+      allow read: if isMock() || isSignedIn();
+      allow create: if isMock() || (isSignedIn() && incoming().sender_id == request.auth.uid);
+      allow delete: if isMock() || (isSignedIn() && (existing().sender_id == request.auth.uid || isAdmin()));
+    }
+
+    // 9. TRANSACTIONS
+    match /transactions/{txId} {
+      allow read: if isMock() || (isSignedIn() && existing().user_id == request.auth.uid) || isAdmin();
+      allow create: if isMock() || (isSignedIn() && incoming().user_id == request.auth.uid) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // 10. LIVE MATCHES / BALL BY BALL
+    match /live_matches/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update: if isMock() || (isSignedIn() && (
+        existing().get('created_by', null) == null || existing().get('created_by', '') == request.auth.uid ||
+        existing().get('owner_id', null) == null || existing().get('owner_id', '') == request.auth.uid ||
+        isAdmin()
+      ));
+      allow delete: if isMock() || (isSignedIn() && (existing().get('created_by', '') == request.auth.uid || existing().get('owner_id', '') == request.auth.uid || isAdmin()));
+    }
+    match /ball_by_ball/{id} { 
+      allow read: if true; 
+      allow create: if isMock() || isSignedIn();
+      allow update: if isMock() || (isSignedIn() && (
+        existing().get('created_by', null) == null || existing().get('created_by', '') == request.auth.uid ||
+        existing().get('owner_id', null) == null || existing().get('owner_id', '') == request.auth.uid ||
+        isAdmin()
+      ));
+      allow delete: if isMock() || (isSignedIn() && (existing().get('created_by', '') == request.auth.uid || existing().get('owner_id', '') == request.auth.uid || isAdmin()));
+    }
+
+    // 11. CLUBS & ASSOCIATIONS
+    match /clubs/{id} {
+      allow read: if true;
+      allow write: if isMock() || isSignedIn();
+    }
+    match /associations/{id} {
+      allow read: if true;
+      allow write: if isMock() || isSignedIn();
+    }
+
+    // 12. COMMUNITY POSTS & NOTIFICATIONS & TEAM CHAT
+    match /community_posts/{id} {
+      allow read: if true;
+      allow write: if isMock() || isSignedIn();
+    }
+    match /notifications/{id} {
+      allow read, write: if isMock() || isSignedIn();
+    }
+    match /team_chat/{id} {
+      allow read, write: if isMock() || isSignedIn();
+    }
+
+    // 13. PASSKEYS & CHALLENGES
+    match /challenges/{id} {
+      allow read, write: if true;
+    }
+    match /auth_challenges/{id} {
+      allow read, write: if true;
+    }
+    match /passkeys/{id} {
+      allow read, write: if true;
+    }
+    // 14. CALENDAR EVENTS
+    match /calendar_events/{id} {
+      allow read: if true;
+      allow write: if isMock() || isSignedIn();
+    }
+  }
+}

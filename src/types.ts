@@ -4,6 +4,24 @@ export interface VisualMarker {
   type: "bowler_release" | "batsman_hit" | "boundary" | "replay_start" | "wicket" | "info";
 }
 
+export interface ExtractedClip {
+  id: string;
+  name: string;
+  url: string;
+  downloadUrl?: string;
+  startTime: number;
+  endTime: number;
+  over?: number;
+  ball?: number;
+  innings?: number;
+  runs?: number;
+  wicket?: boolean;
+  videoUrl: string;
+  timestamp?: string;
+  trackingInfo?: any;
+  customLabel?: string;
+}
+
 export interface Delivery {
   over: number;
   ball: number;
@@ -28,6 +46,7 @@ export interface Delivery {
   isWide?: boolean;
   isNoBall?: boolean;
   isPractice?: boolean;
+  customLabel?: string;
 }
 
 export interface MatchFeed {
@@ -36,6 +55,7 @@ export interface MatchFeed {
   venue: string;
   description: string;
   videoUrl: string;
+  videoFile?: File; // Keep reference to file if uploaded
   duration: number;
   quality: string;
   deliveries: Delivery[];

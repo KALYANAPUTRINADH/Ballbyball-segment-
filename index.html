@@ -3,8 +3,63 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
+    <meta name="google-adsense-account" content="ca-pub-5378331432453842">
+    <title>STREAMLIFY</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script>
+      // Completely block Vite's WebSocket to prevent unhandled rejections
+      var _origWs = window.WebSocket;
+      window.WebSocket = function(url, protocols) {
+        var isVite = (typeof url === 'string' && url.indexOf('vite') !== -1) || 
+                     (protocols === 'vite-hmr' || (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1));
+        if (isVite) {
+          return {
+            close: function() {},
+            send: function() {},
+            addEventListener: function() {},
+            removeEventListener: function() {},
+            readyState: 1
+          };
+        }
+        return new _origWs(url, protocols);
+      };
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event.reason ? String(event.reason.message || event.reason).toLowerCase() : '';
+        if (reason.indexOf('websocket') !== -1 || reason.indexOf('failed to connect') !== -1) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('error', function(event) {
+        var msg = event.message ? String(event.message).toLowerCase() : '';
+        if (msg.indexOf('websocket') !== -1 || msg.indexOf('failed to connect') !== -1) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      // Suppress benign Vite WebSocket errors logged directly to console
+      var origError = console.error;
+      console.error = function() {
+        var msg = typeof arguments[0] === 'string' ? arguments[0].toLowerCase() : String(arguments[0]?.message || arguments[0]).toLowerCase();
+        if (msg.indexOf('websocket') !== -1 || msg.indexOf('failed to connect') !== -1) return;
+        origError.apply(console, arguments);
+      };
+      var origWarn = console.warn;
+      console.warn = function() {
+        var msg = typeof arguments[0] === 'string' ? arguments[0].toLowerCase() : String(arguments[0]?.message || arguments[0]).toLowerCase();
+        if (msg.indexOf('websocket') !== -1 || msg.indexOf('failed to connect') !== -1) return;
+        origWarn.apply(console, arguments);
+      };
+      var origLog = console.log;
+      console.log = function() {
+        var msg = typeof arguments[0] === 'string' ? arguments[0].toLowerCase() : String(arguments[0]?.message || arguments[0]).toLowerCase();
+        if (msg.indexOf('websocket') !== -1 || msg.indexOf('failed to connect') !== -1) return;
+        origLog.apply(console, arguments);
+      };
+    </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

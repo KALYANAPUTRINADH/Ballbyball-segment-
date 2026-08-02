@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  streamlify:
+    build: .
+    ports:
+      - "80:3000"
+      - "1935:1935"
+      - "8001:8001"
+    restart: unless-stopped
