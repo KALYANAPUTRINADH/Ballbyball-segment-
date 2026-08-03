@@ -67,7 +67,7 @@ npm run build
 ## 6. Start the Backend Server
 Use PM2 to run the built Node server in the background:
 ```bash
-pm2 start dist/server.cjs --name "streamlify"
+NODE_ENV=production pm2 start dist/server.cjs --name "streamlify"
 pm2 save
 pm2 startup
 ```
@@ -75,11 +75,7 @@ pm2 startup
 ## 7. Setup Nginx as a Reverse Proxy (for Port 80 & 443)
 Configure Nginx to route traffic to your Node.js app:
 ```bash
-sudo nano /etc/nginx/sites-available/streamlify
-```
-
-Paste the following configuration:
-```nginx
+sudo tee /etc/nginx/sites-available/streamlify > /dev/null << 'EOF'
 server {
     listen 80;
     server_name streamlify.in www.streamlify.in;
@@ -102,11 +98,13 @@ server {
         proxy_set_header Host $host;
     }
 }
+EOF
 ```
 
 Enable the configuration:
 ```bash
 sudo ln -s /etc/nginx/sites-available/streamlify /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx
 ```

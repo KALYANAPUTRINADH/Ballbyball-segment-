@@ -1303,12 +1303,14 @@ app.use('/live', createProxyMiddleware({
 
 
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  const isProduction = process.env.NODE_ENV === "production" || process.argv[1]?.endsWith('server.cjs');
+  if (!isProduction) {
     const vite = await import("vite");
     const viteServer = await vite.createServer({
       server: { 
         middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === 'true' ? false : undefined
+        hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
+        allowedHosts: true
       },
       appType: "spa",
     });
