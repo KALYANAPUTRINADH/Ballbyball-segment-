@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Peer } from 'peerjs';
 import { streamManagement } from '../services/StreamManagementAPI';
-import { Tv, MessageCircle, Twitter, Facebook, Wifi, Video as VideoIcon, Mic, Globe, Play, Pause, Square, Circle, RotateCcw, Video, Camera, Scissors, Download, Loader2, X, Maximize, Minimize, Sparkles, Share2, Copy, Radio, Settings, Info, Youtube, ExternalLink, Trophy, Calculator, Check, Search, CloudRain, Umbrella, RefreshCw, Shield, Clock, AlertTriangle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Tv, MessageCircle, Twitter, Facebook, Wifi, Video as VideoIcon, Mic, Globe, Play, Pause, Square, Circle, RotateCcw, Video, Camera, Scissors, Download, Loader2, X, Maximize, Minimize, Sparkles, Share2, Copy, Radio, Settings, Info, Youtube, ExternalLink, Trophy, Calculator, Check, Search, CloudRain, Umbrella, RefreshCw, Shield, Clock, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { WagonWheel } from './WagonWheel';
 import { MatchTabs } from './MatchTabs';
 import { VisualWagonWheel } from './VisualWagonWheel';
@@ -1672,9 +1672,9 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
             ) : isReceivingWebRTC ? (
               <video ref={viewerVideoRef} className="absolute inset-0 w-full h-full object-cover" autoPlay playsInline controls />
             ) : youtubeUrl ? (
-              youtubeUrl.includes('.flv') || youtubeUrl.includes('.m3u8') ? (
-                <VideoPlayer streamKey={youtubeUrl.split('/').pop()?.replace('.flv', '').replace('.m3u8', '') || youtubeUrl} />
-              ) : youtubeUrl.includes('.mp4') ? (
+              youtubeUrl.includes('.flv') ? (
+                <VideoPlayer streamKey={youtubeUrl.split('/').pop()?.replace('.flv', '') || ''} />
+              ) : youtubeUrl.includes('.m3u8') || youtubeUrl.includes('.mp4') ? (
                 <HlsPlayer src={youtubeUrl} />
               ) : (
                 <iframe
@@ -1777,7 +1777,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                       <button
                         title="Use OBS Stream"
                         onClick={() => {
-                          const internalUrl = `https://streamlify.in/hls/${obsStreamKey}.m3u8`;
+                          const internalUrl = `https://streamlify.in/live/${obsStreamKey}.flv`;
                           setYoutubeUrl(internalUrl);
                           if (matchId && isOwner) {
                             scoreboardService.updateScore(matchId, { youtubeUrl: internalUrl }, sportType);
@@ -3780,18 +3780,6 @@ Viewers`}
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4 text-xs text-amber-900 space-y-1">
-                  <p className="font-bold flex items-center text-amber-900">
-                    <AlertCircle className="w-3.5 h-3.5 mr-1 text-amber-600 shrink-0" />
-                    OBS Studio says "Failed to connect to server"?
-                  </p>
-                  <p className="text-slate-600 leading-relaxed">
-                    1. <strong>Use YouTube Service in OBS:</strong> In OBS Settings &gt; Stream, choose <em>YouTube - RTMPS</em> service & paste your YouTube stream key.<br />
-                    2. <strong>Or use OBS Virtual Camera:</strong> Click <em>Start Virtual Camera</em> in OBS and select OBS Virtual Camera in browser settings.
-                  </p>
-                </div>
-
                 <div className="flex space-x-2">
                   <button 
                     onClick={isStreamingToYoutube ? stopYoutubeStream : startYoutubeStream}

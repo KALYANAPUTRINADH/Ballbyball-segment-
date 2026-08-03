@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { WebcamStream } from '../components/WebcamStream';
-import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save, AlertCircle } from 'lucide-react';
+import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 import { useToast } from '../components/ToastContext';
-import { StreamHealthMonitor } from '../components/StreamHealthMonitor';
 
 export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView?: (v: string | null) => void }) {
   const { user } = useAuth();
@@ -15,7 +14,6 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
   const [streamKey, setStreamKey] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeStreamKey, setActiveStreamKey] = useState<string>(''); // The one passed to VideoPlayer
-  const [streamStats, setStreamStats] = useState<any>(null);
 
   useEffect(() => {
     const fetchStreamKey = async () => {
@@ -123,7 +121,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
         <div className="lg:col-span-2 space-y-4 flex flex-col">
           <div className="flex-1 min-h-[400px] bg-black rounded-lg overflow-hidden border border-neutral-800 shadow-xl relative flex flex-col">
             {streamMode === 'rtmp' ? (
-              <VideoPlayer streamKey={activeStreamKey} onStatsUpdate={setStreamStats} />
+              <VideoPlayer streamKey={activeStreamKey} />
             ) : (
               <WebcamStream />
             )}
@@ -143,37 +141,6 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
         </div>
         
         <div className="space-y-6">
-          {streamMode === 'rtmp' && (
-            <>
-              <StreamHealthMonitor stats={streamStats} isLive={!!streamStats && streamStats.speed > 0} />
-              <div className="bg-amber-950/40 border border-amber-800/60 p-4 rounded-xl text-xs text-amber-200 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>Getting "Failed to connect to server" in OBS?</span>
-                </div>
-                <p className="text-amber-200/90 leading-relaxed">
-                  If OBS shows <strong>"Failed to connect to server"</strong> when clicking Start Streaming, your network/firewall is blocking custom RTMP server ports or the ingest domain is unreachable.
-                </p>
-                <div className="space-y-2 pt-1 text-xs">
-                  <div className="bg-neutral-950/80 p-2.5 rounded-lg border border-amber-900/50">
-                    <span className="font-bold text-emerald-400 block mb-0.5">Method A: OBS Virtual Camera (Instant & Recommended)</span>
-                    <p className="text-neutral-300">
-                      1. In OBS, click <strong className="text-white">Start Virtual Camera</strong> (bottom right panel).<br />
-                      2. Switch tab above to <strong className="text-white">Virtual Camera</strong> mode and select <em>OBS Virtual Camera</em>. Zero server connection needed!
-                    </p>
-                  </div>
-                  <div className="bg-neutral-950/80 p-2.5 rounded-lg border border-amber-900/50">
-                    <span className="font-bold text-blue-400 block mb-0.5">Method B: Stream via YouTube RTMPS</span>
-                    <p className="text-neutral-300">
-                      1. In OBS Settings &gt; Stream, select <strong className="text-white">YouTube - RTMPS</strong> and paste your YouTube Stream Key.<br />
-                      2. Click <strong className="text-white">Start Streaming</strong> in OBS, then paste the YouTube URL into the Match Settings.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-          
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 shadow-lg">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
               <Settings className="w-5 h-5 text-neutral-400" />
@@ -205,10 +172,10 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                   <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
                   <div className="space-y-2">
                     <p>
-                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
+                      <strong>Cloud Environment Notice:</strong> This preview runs in a secure cloud container that restricts incoming RTMP ports.
                     </p>
                     <p>
-                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
+                      To broadcast from your local OBS Studio, you must <strong>export this app</strong> (via the Settings menu) and run it on your local machine using <code>npm run dev</code>.
                     </p>
                   </div>
                 </div>
@@ -254,25 +221,6 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                       {isSaving ? <span className="animate-spin mr-1">↻</span> : <Save className="w-4 h-4 mr-1" />} Save
                     </button>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1 mt-4">Parallel YouTube Stream URL</label>
-                  <div className="flex rounded-lg shadow-sm">
-                    <input 
-                      type="text" 
-                      placeholder="https://youtube.com/watch?v=..."
-                      className="bg-neutral-950 border border-neutral-800 rounded-lg p-2.5 text-xs text-white flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
-                      onChange={(e) => {
-                        // We would typically save this to the active match
-                        // But since OBSLiveStream doesn't have matchId context directly without selection,
-                        // we'll instruct them to set it in the Match page.
-                      }}
-                      readOnly
-                      onClick={() => showToast('To set a YouTube viewer link, go to your Match -> Broadcast settings.')}
-                    />
-                  </div>
-                  <p className="text-[10px] text-neutral-500 mt-1">If streaming to YouTube via OBS, paste your video link in the Match Broadcast settings so viewers can watch there.</p>
                 </div>
                 
                 <div className="pt-5 border-t border-neutral-800/80 mt-2">

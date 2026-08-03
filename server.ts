@@ -1275,6 +1275,57 @@ app.post("/api/notify", requireAuth, async (req: any, res: any) => {
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+// @ts-ignore
+import NodeMediaServer from 'node-media-server';
+
+const nmsConfig = {
+  rtmp: {
+    port: 1935,
+    chunk_size: 60000,
+    gop_cache: true,
+    ping: 30,
+    ping_timeout: 60
+  },
+  http: {
+    port: 8001,
+    allow_origin: '*'
+  }
+};
+const _global = globalThis as any;
+if (!_global.__NMS_STARTED__) {
+  _global.__NMS_STARTED__ = true;
+  const nms = new NodeMediaServer(nmsConfig);
+  try {
+    nms.run();
+    
+    // Store reference to clean up on restart
+    _global.__NMS_INSTANCE__ = nms;
+    
+    const cleanup = () => {
+      if (_global.__NMS_INSTANCE__) {
+        _global.__NMS_INSTANCE__.stop();
+        _global.__NMS_INSTANCE__ = null;
+      }
+    };
+    
+    process.once('SIGINT', cleanup);
+    process.once('SIGTERM', cleanup);
+    process.once('exit', cleanup);
+    
+  } catch (e) {
+    console.error("Failed to start NodeMediaServer:", e);
+  }
+}
+
+
+app.use('/live', createProxyMiddleware({
+  target: 'http://127.0.0.1:8001',
+  changeOrigin: true,
+  ws: true
+}));
+
+
 async function startServer() {
   const isProduction = process.env.NODE_ENV === "production" || process.env.PM2_HOME !== undefined || process.argv.some(arg => arg.includes('server.cjs'));
   if (!isProduction) {

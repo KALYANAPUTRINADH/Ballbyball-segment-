@@ -114,10 +114,7 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
                   <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
                   <div className="space-y-2">
                     <p>
-                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
-                    </p>
-                    <p>
-                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
+                      <strong>Server Configuration:</strong> Set up your OBS stream to point to this server.
                     </p>
                   </div>
                 </div>
