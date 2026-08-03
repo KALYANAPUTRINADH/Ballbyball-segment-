@@ -20,7 +20,7 @@ export default defineConfig(() => {
       host: '0.0.0.0',
       hmr: false,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      allowedHosts: ['streamlify.in', 'www.streamlify.in', 'localhost'],
+      allowedHosts: ["streamlify.in", "www.streamlify.in", "localhost"],
     },
     optimizeDeps: {
       exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
