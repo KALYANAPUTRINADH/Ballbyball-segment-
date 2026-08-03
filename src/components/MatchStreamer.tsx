@@ -25,7 +25,7 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
   const [copiedKey, setCopiedKey] = useState(false);
   const [showSettings, setShowSettings] = useState(isOwner);
 
-  const rtmpServerUrl = 'rtmp://streamlify.in/live';
+  const rtmpServerUrl = 'rtmp://streamlify.in:1935/live';
   const streamKey = `obs_${matchId}`;
 
   useEffect(() => {

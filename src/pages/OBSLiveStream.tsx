@@ -71,7 +71,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
   const [copiedKey, setCopiedKey] = useState(false);
 
   const isCloudEnvironment = typeof window !== 'undefined' && window.location.hostname.includes('run.app');
-  const rtmpServerUrl = 'rtmp://streamlify.in/live';
+  const rtmpServerUrl = 'rtmp://streamlify.in:1935/live';
 
   const handleCopy = (text: string, type: 'server' | 'key') => {
     navigator.clipboard.writeText(text);

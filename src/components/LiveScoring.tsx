@@ -3721,7 +3721,7 @@ Viewers`}
                   </button>
                   <button 
                     onClick={() => {
-                        const defaultRtmp = 'rtmp://streamlify.in/live';
+                        const defaultRtmp = 'rtmp://streamlify.in:1935/live';
                         setStreamDestination('streamlify');
                         setStreamSettings({...streamSettings, rtmpUrl: defaultRtmp, rtmpKey: 'obs_' + (user?.uid ? user.uid.slice(0, 8) : 'stream')});
                     }}
@@ -3737,7 +3737,7 @@ Viewers`}
                     <div className="flex">
                       <input 
                         type="text" 
-                        placeholder={streamDestination === 'streamlify' ? 'rtmp://streamlify.in/live' : 'rtmp://a.rtmp.youtube.com/live2'}
+                        placeholder={streamDestination === 'streamlify' ? 'rtmp://streamlify.in:1935/live' : 'rtmp://a.rtmp.youtube.com/live2'}
                         value={streamSettings.rtmpUrl}
                         onChange={(e) => setStreamSettings({...streamSettings, rtmpUrl: e.target.value})}
                         className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none" 
@@ -3761,7 +3761,7 @@ Viewers`}
                     <div className="flex">
                       <input 
                         type="text" 
-                        placeholder="rtmp://streamlify.in/live"
+                        placeholder="rtmp://streamlify.in:1935/live"
                         value={streamSettings.obsRtmpUrl}
                         onChange={(e) => setStreamSettings({...streamSettings, obsRtmpUrl: e.target.value})}
                         className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none" 
