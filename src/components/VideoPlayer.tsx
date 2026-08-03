@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import flvjs from 'flv.js';
 import { AlertCircle } from 'lucide-react';
 
-export const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
+export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, onStatsUpdate?: (stats: any) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<flvjs.Player | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
         try {
           const player = flvjs.createPlayer({
             type: 'flv',
-            url: `/live/${streamKey}.flv`,
+            url: `https://streamlify.in/live/${streamKey}.flv`,
             isLive: true,
             hasAudio: true,
             hasVideo: true,
@@ -63,6 +63,12 @@ export const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
           
           player.on(flvjs.Events.MEDIA_INFO, () => {
              setError(null);
+          });
+          
+          player.on(flvjs.Events.STATISTICS_INFO, (stats) => {
+            if (onStatsUpdate) {
+              onStatsUpdate(stats);
+            }
           });
           
         } catch (err) {

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Settings, MonitorPlay, Copy, Check, Info } from 'lucide-react';
+import { X, Settings, MonitorPlay, Copy, Check, Info, Youtube, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ScoreboardWidget } from './ScoreboardWidget';
 import { ShareButton } from './ShareButton';
 import { dbService } from '../lib/database';
 import { VideoPlayer } from './VideoPlayer';
+import { StreamHealthMonitor } from './StreamHealthMonitor';
 
 export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string, setFullScreenView: (v: string | null) => void }) {
   const { user, isAdmin } = useAuth();
@@ -24,8 +25,9 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
   const [copiedServer, setCopiedServer] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showSettings, setShowSettings] = useState(isOwner);
+  const [streamStats, setStreamStats] = useState<any>(null);
 
-  const rtmpServerUrl = typeof window !== 'undefined' ? `rtmp://${window.location.hostname}/live` : 'rtmp://localhost/live';
+  const rtmpServerUrl = 'rtmp://streamlify.in/live';
   const streamKey = `obs_${matchId}`;
 
   useEffect(() => {
@@ -47,19 +49,27 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
     }
   };
 
+  const isLive = !!streamStats && streamStats.speed > 0;
+
   return (
     <div className="flex flex-col h-screen bg-black text-white">
       {/* Header */}
       <div className="p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-30 absolute top-0 left-0 right-0">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 bg-red-600 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-lg shadow-red-500/20">
-            <span className="w-2 h-2 bg-white rounded-full"></span>
-            <span>LIVE</span>
+          <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold shadow-lg ${isLive ? 'bg-red-600 shadow-red-500/20 animate-pulse' : 'bg-neutral-800 text-neutral-400'}`}>
+            <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-white' : 'bg-neutral-500'}`}></span>
+            <span>{isLive ? 'LIVE' : 'OFFLINE'}</span>
           </div>
           {matchData && (
             <div className="text-sm font-bold text-slate-200">
               {matchData.teamA} vs {matchData.teamB}
             </div>
+          )}
+          {matchData?.youtubeUrl && (
+             <a href={matchData.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1 text-xs font-bold bg-white/10 hover:bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm transition-colors text-white ml-2">
+                <Youtube className="w-3.5 h-3.5 text-red-500" />
+                <span className="hidden sm:inline">YouTube</span>
+             </a>
           )}
         </div>
         <div className="flex items-center space-x-2">
@@ -83,9 +93,35 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
       </div>
 
       {/* Main Viewport */}
-      <div className="flex-1 relative bg-slate-900 flex items-center justify-center overflow-hidden">
-        <VideoPlayer streamKey={streamKey} />
+      <div className="flex-1 relative bg-slate-900 flex items-center justify-center overflow-hidden group">
+        <VideoPlayer streamKey={streamKey} onStatsUpdate={setStreamStats} />
         
+        {/* Stream Status Indicator (HUD) */}
+        {isLive && (
+          <div className="absolute top-20 left-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-white/10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
+            <div className="flex items-center gap-3 text-xs font-medium">
+              <div className="flex items-center gap-1.5 text-emerald-400">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Health: Excellent</span>
+              </div>
+              <div className="w-px h-3 bg-white/20"></div>
+              <div className="flex items-center gap-1.5 text-blue-300">
+                <Activity className="w-3.5 h-3.5" />
+                <span>{streamStats.speed ? Math.round(streamStats.speed * 8) : 0} kbps</span>
+              </div>
+              {matchData?.youtubeUrl && (
+                <>
+                  <div className="w-px h-3 bg-white/20"></div>
+                  <div className="flex items-center gap-1.5 text-red-400">
+                    <Youtube className="w-3.5 h-3.5" />
+                    <span>YouTube: Connected</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Scoreboard Overlay */}
         <div className="absolute inset-x-0 bottom-16 z-20 pointer-events-none p-4">
           <ScoreboardWidget 
@@ -109,27 +145,70 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
             </div>
             
             <div className="p-5 space-y-6">
-              <div className="bg-blue-950/40 border border-blue-900/60 p-4 rounded-lg text-sm text-blue-200 flex flex-col gap-3 shadow-inner">
-                <div className="flex gap-3">
-                  <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                  <p>
-                    <strong>Cloud Environment Notice:</strong> You are currently running in a secure cloud environment that blocks incoming RTMP traffic (Port 1935). OBS cannot connect directly via RTMP.
-                  </p>
-                </div>
-              </div>
               
-              <div className="bg-emerald-950/30 border border-emerald-900/50 p-4 rounded-lg">
-                <h4 className="text-emerald-400 font-bold mb-3 flex items-center gap-2">
-                  <Check className="w-4 h-4" /> Recommended OBS Setup
-                </h4>
-                <ol className="list-decimal pl-4 space-y-3 text-sm text-neutral-300">
-                  <li>Open OBS Studio on your computer.</li>
-                  <li>Set up your scenes and sources as normal.</li>
-                  <li>Click <strong>"Start Virtual Camera"</strong> in the controls panel.</li>
-                  <li>Close this sidebar, open the <strong>Live Scoring</strong> view.</li>
-                  <li>Click the <strong>Start Live Broadcast</strong> button.</li>
-                  <li>In the camera list, select your <strong>OBS Virtual Camera</strong>.</li>
-                </ol>
+              <StreamHealthMonitor stats={streamStats} isLive={isLive} />
+
+              <div className="space-y-4">
+                <div className="bg-blue-950/40 border border-blue-900/60 p-4 rounded-lg mb-6 text-sm text-blue-200 flex gap-3 shadow-inner">
+                  <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
+                  <div className="space-y-2">
+                    <p>
+                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
+                    </p>
+                    <p>
+                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">OBS RTMP Server URL</label>
+                  <div className="flex rounded-lg shadow-sm">
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={rtmpServerUrl} 
+                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
+                    />
+                    <button 
+                      onClick={() => handleCopy(rtmpServerUrl, 'server')}
+                      className={`px-3 py-2 border border-neutral-800 border-l rounded-r-lg text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center justify-center min-w-[70px] ${copiedServer ? 'text-emerald-500 bg-emerald-950/30' : 'text-neutral-400 bg-neutral-950'}`}
+                    >
+                      {copiedServer ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Stream Key</label>
+                  <div className="flex rounded-lg shadow-sm">
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={streamKey} 
+                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
+                    />
+                    <button 
+                      onClick={() => handleCopy(streamKey, 'key')}
+                      className={`px-3 py-2 border border-neutral-800 border-l rounded-r-lg text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center justify-center min-w-[70px] ${copiedKey ? 'text-emerald-500 bg-emerald-950/30' : 'text-neutral-400 bg-neutral-950'}`}
+                    >
+                      {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-neutral-950/50 p-4 rounded-lg border border-neutral-800 mt-6">
+                  <h4 className="text-white font-bold mb-3 flex items-center gap-2 text-sm">
+                    <MonitorPlay className="w-4 h-4" /> OBS Settings Setup
+                  </h4>
+                  <ol className="list-decimal pl-4 space-y-2 text-xs text-neutral-400">
+                    <li>Open OBS Studio settings.</li>
+                    <li>Go to the <strong>Stream</strong> tab.</li>
+                    <li>Set Service to <strong>Custom...</strong></li>
+                    <li>Paste the Server URL and Stream Key.</li>
+                    <li>Click <strong>Start Streaming</strong> in OBS.</li>
+                  </ol>
+                </div>
               </div>
 
               

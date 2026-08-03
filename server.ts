@@ -1275,33 +1275,6 @@ app.post("/api/notify", requireAuth, async (req: any, res: any) => {
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
-import { createProxyMiddleware } from 'http-proxy-middleware';
-// @ts-ignore
-import NodeMediaServer from 'node-media-server';
-
-const nmsConfig = {
-  rtmp: {
-    port: 1935,
-    chunk_size: 60000,
-    gop_cache: true,
-    ping: 30,
-    ping_timeout: 60
-  },
-  http: {
-    port: 8001,
-    allow_origin: '*'
-  }
-};
-const nms = new NodeMediaServer(nmsConfig);
-nms.run();
-
-app.use('/live', createProxyMiddleware({
-  target: 'http://127.0.0.1:8001/live',
-  changeOrigin: true,
-  ws: true
-}));
-
-
 async function startServer() {
   const isProduction = process.env.NODE_ENV === "production" || process.env.PM2_HOME !== undefined || process.argv.some(arg => arg.includes('server.cjs'));
   if (!isProduction) {

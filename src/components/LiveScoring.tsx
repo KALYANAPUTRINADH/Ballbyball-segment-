@@ -7,6 +7,7 @@ import { MatchTabs } from './MatchTabs';
 import { VisualWagonWheel } from './VisualWagonWheel';
 import { ShareImageCard } from './ShareImageCard';
 import { ScoreboardWidget } from './ScoreboardWidget';
+import { VideoPlayer } from './VideoPlayer';
 import Hls from 'hls.js';
 
 
@@ -293,6 +294,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   const [wicketFielder, setWicketFielder] = useState('');
   const [outBatsman, setOutBatsman] = useState<'striker' | 'nonStriker'>('striker');
   const [streamSettings, setStreamSettings] = useState({ camera: 'rear', quality: '720p', platform: 'Streamlify Live', deviceId: '', rtmpUrl: '', rtmpKey: '', obsRtmpUrl: '', obsRtmpKey: '' });
+  const [obsStreamKey, setObsStreamKey] = useState('');
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [isStreamingToYoutube, setIsStreamingToYoutube] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -359,14 +361,19 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
       if (user && user.uid) {
         try {
           const profile = await dbService.get('profiles', user.uid) as any;
-          if (profile && profile.youtube_stream_key) {
-            savedKey = profile.youtube_stream_key;
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(`youtube_stream_key_${user.uid}`, savedKey);
+          if (profile) {
+            if (profile.youtube_stream_key) {
+              savedKey = profile.youtube_stream_key;
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`youtube_stream_key_${user.uid}`, savedKey);
+              }
+            }
+            if (profile.obs_stream_key) {
+              setObsStreamKey(profile.obs_stream_key);
             }
           }
         } catch (e) {
-          console.warn("Failed to load YouTube stream key in LiveScoring:", e);
+          console.warn("Failed to load stream keys in LiveScoring:", e);
         }
       }
       
@@ -1665,7 +1672,9 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
             ) : isReceivingWebRTC ? (
               <video ref={viewerVideoRef} className="absolute inset-0 w-full h-full object-cover" autoPlay playsInline controls />
             ) : youtubeUrl ? (
-              youtubeUrl.includes('.m3u8') || youtubeUrl.includes('.mp4') ? (
+              youtubeUrl.includes('.flv') ? (
+                <VideoPlayer streamKey={youtubeUrl.split('/').pop()?.replace('.flv', '') || ''} />
+              ) : youtubeUrl.includes('.m3u8') || youtubeUrl.includes('.mp4') ? (
                 <HlsPlayer src={youtubeUrl} />
               ) : (
                 <iframe
@@ -1747,21 +1756,38 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                   >
                     <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Studio</span>
                   </button>
-                  <div className="relative flex-1 min-w-0 max-w-lg">
-                    <Youtube className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 transform -translate-y-1/2" />
-                    <input 
-                      type="text" 
-                      placeholder="https://..."
-                      value={youtubeUrl}
-                      onChange={(e) => {
-                        const newUrl = e.target.value;
-                        setYoutubeUrl(newUrl);
-                        if (matchId && isOwner) {
-                          scoreboardService.updateScore(matchId, { youtubeUrl: newUrl }, sportType);
-                        }
-                      }}
-                      className="w-full bg-slate-800 text-white text-[11px] sm:text-xs rounded-full pl-8 pr-3 py-1.5 sm:py-2 focus:outline-none focus:ring-1 focus:ring-[#d11a2a]"
-                    />
+                  <div className="relative flex-1 min-w-0 max-w-lg flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Youtube className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 transform -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        placeholder="https://..."
+                        value={youtubeUrl}
+                        onChange={(e) => {
+                          const newUrl = e.target.value;
+                          setYoutubeUrl(newUrl);
+                          if (matchId && isOwner) {
+                            scoreboardService.updateScore(matchId, { youtubeUrl: newUrl }, sportType);
+                          }
+                        }}
+                        className="w-full bg-slate-800 text-white text-[11px] sm:text-xs rounded-full pl-8 pr-3 py-1.5 sm:py-2 focus:outline-none focus:ring-1 focus:ring-[#d11a2a]"
+                      />
+                    </div>
+                    {obsStreamKey && (
+                      <button
+                        title="Use OBS Stream"
+                        onClick={() => {
+                          const internalUrl = `https://streamlify.in/live/${obsStreamKey}.flv`;
+                          setYoutubeUrl(internalUrl);
+                          if (matchId && isOwner) {
+                            scoreboardService.updateScore(matchId, { youtubeUrl: internalUrl }, sportType);
+                          }
+                        }}
+                        className="p-1.5 sm:p-2 bg-slate-800 hover:bg-slate-700 rounded-full text-slate-300 transition-colors"
+                      >
+                        <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <button 

@@ -33,6 +33,8 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
   const [isSavingYoutubeKey, setIsSavingYoutubeKey] = useState(false);
 
   // Load stream salt and YouTube stream key
+  const [obsStreamKey, setObsStreamKey] = useState('');
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedSalt = localStorage.getItem(`custom_stream_salt_${user?.uid || 'guest'}`);
@@ -44,6 +46,28 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
         setCustomStreamKeySalt(newSalt);
       }
     }
+  }, [user]);
+
+  // Load stream key from profile
+  useEffect(() => {
+    const fetchStreamKey = async () => {
+      if (user && user.uid) {
+        try {
+          const profile = await dbService.get('profiles', user.uid) as any;
+          if (profile && profile.obs_stream_key) {
+            setObsStreamKey(profile.obs_stream_key);
+          } else {
+            // Fallback to generated if missing
+            setObsStreamKey(`live_${user.uid.slice(0, 8)}_123456`);
+          }
+        } catch (e) {
+          console.warn("Failed to load obs stream key:", e);
+        }
+      } else {
+        setObsStreamKey('live_guest_123456');
+      }
+    };
+    fetchStreamKey();
   }, [user]);
 
   // Load stream quality preferences
@@ -140,8 +164,8 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
     }
   };
 
-  const streamKey = `live_${user?.uid?.slice(0, 8) || 'guest'}_${customStreamKeySalt}`;
-  const rtmpServerUrl = 'rtmp://a.rtmp.youtube.com/live2';
+  const isCloudEnvironment = typeof window !== 'undefined' && window.location.hostname.includes('run.app');
+  const rtmpServerUrl = 'rtmp://streamlify.in/live';
   
   const scoreboardOverlayUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?overlay=true`
@@ -197,7 +221,7 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
         "type": "rtmp_custom",
         "settings": {
           "server": rtmpServerUrl,
-          "key": streamKey
+          "key": obsStreamKey
         }
       }
     };
@@ -423,7 +447,7 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
                 <input 
                   type={showPrivateKey ? "text" : "password"} 
                   readOnly 
-                  value={streamKey} 
+                  value={obsStreamKey} 
                   className="bg-slate-50 border border-slate-200 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-slate-700 flex-1 focus:outline-none" 
                 />
                 <button 
@@ -433,7 +457,7 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
                   {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
                 <button 
-                  onClick={() => handleCopy(streamKey, 'key')}
+                  onClick={() => handleCopy(obsStreamKey, 'key')}
                   className={`px-3 py-2 border border-slate-200 border-l rounded-r-lg text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center min-w-[70px] ${copiedKey ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600'}`}
                 >
                   {copiedKey ? <Check className="w-4 h-4" /> : 'Copy'}
@@ -1074,7 +1098,7 @@ RTMP Server
                       <input 
                         type={showPrivateKey ? "text" : "password"} 
                         readOnly 
-                        value={streamKey} 
+                        value={obsStreamKey} 
                         className="bg-white border border-slate-200 border-r-0 rounded-l-lg p-2 text-xs font-mono text-slate-700 flex-1 focus:outline-none" 
                       />
                       <button 
@@ -1086,7 +1110,7 @@ RTMP Server
                       </button>
                       <button 
                         type="button"
-                        onClick={() => handleCopy(streamKey, 'key')}
+                        onClick={() => handleCopy(obsStreamKey, 'key')}
                         className={`px-3 py-1.5 border border-slate-200 rounded-r-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center min-w-[70px] ${copiedKey ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600'}`}
                       >
                         {copiedKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : 'Copy'}
