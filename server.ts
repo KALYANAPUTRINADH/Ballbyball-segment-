@@ -1310,7 +1310,7 @@ async function startServer() {
       server: { 
         middlewareMode: true,
         hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
-        allowedHosts: ['streamlify.in', 'www.streamlify.in', 'localhost']
+        allowedHosts: true
       },
       appType: "spa",
     });
