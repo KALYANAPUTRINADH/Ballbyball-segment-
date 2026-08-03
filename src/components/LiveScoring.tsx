@@ -1777,7 +1777,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                       <button
                         title="Use OBS Stream"
                         onClick={() => {
-                          const internalUrl = `https://streamlify.in/live/${obsStreamKey}.flv`;
+                          const internalUrl = `${window.location.origin}/live/${obsStreamKey}.flv`;
                           setYoutubeUrl(internalUrl);
                           if (matchId && isOwner) {
                             scoreboardService.updateScore(matchId, { youtubeUrl: internalUrl }, sportType);
@@ -3721,8 +3721,9 @@ Viewers`}
                   </button>
                   <button 
                     onClick={() => {
-                       setStreamDestination('streamlify');
-                       setStreamSettings({...streamSettings, rtmpUrl: 'rtmp://streamlify.in/live', rtmpKey: 'obs_' + (user?.uid ? user.uid.slice(0, 8) : 'stream')});
+                        const defaultRtmp = 'rtmp://streamlify.in/live';
+                        setStreamDestination('streamlify');
+                        setStreamSettings({...streamSettings, rtmpUrl: defaultRtmp, rtmpKey: 'obs_' + (user?.uid ? user.uid.slice(0, 8) : 'stream')});
                     }}
                     className={`flex-1 py-2 text-sm font-bold rounded-lg border transition-colors ${streamDestination === 'streamlify' ? 'bg-[#d11a2a] text-white border-[#d11a2a]' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
                   >

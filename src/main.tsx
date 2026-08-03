@@ -20,7 +20,7 @@ async function fetchCsrfToken(): Promise<string> {
       }
     }
   } catch (e) {
-    console.error('Failed to fetch CSRF token:', e);
+    console.warn('CSRF token not available on startup:', e);
   }
   return '';
 }
@@ -114,10 +114,14 @@ const init = async () => {
 
   try {
     const res = await fetch('/api/config');
-    const config = await res.json();
-    (window as any).__CONFIG__ = config;
+    if (res.ok) {
+      const config = await res.json();
+      (window as any).__CONFIG__ = config;
+    } else {
+      (window as any).__CONFIG__ = {};
+    }
   } catch (error) {
-    console.error('Failed to load system configuration', error);
+    console.warn('Using default system configuration:', error);
     (window as any).__CONFIG__ = {};
   }
 

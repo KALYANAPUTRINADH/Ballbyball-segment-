@@ -138,26 +138,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    
-    // In production, restrict to specific domains to make it "hacker proof"
-    if (process.env.NODE_ENV === 'production') {
-      const allowedOrigins = [
-        'https://streamlify.in',
-        'https://www.streamlify.in',
-        'http://localhost:3000'
-      ];
-      // Allow AI studio subdomains just in case
-      if (origin.includes('run.app') || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error('CORS policy violation'), false);
-      }
-    }
-    // In dev, allow all
-    callback(null, true);
-  },
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   credentials: true,
@@ -292,7 +273,6 @@ app.use('/api/users/delete', sensitiveLimiter);
 app.get('/api/csrf-token', (req, res) => {
   const token = generateCsrfToken();
   res.cookie('XSRF-TOKEN', token, {
-    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
   });
@@ -1322,8 +1302,19 @@ if (!_global.__NMS_STARTED__) {
 app.use('/live', createProxyMiddleware({
   target: 'http://127.0.0.1:8001',
   changeOrigin: true,
-  ws: true
-}));
+  ws: true,
+  on: {
+    error: (err, req, res: any) => {
+      if (res && typeof res.status === 'function') {
+        res.status(502).json({ error: 'Live streaming server is offline' });
+      }
+    }
+  }
+} as any));
+
+app.use('/live', (req, res) => {
+  res.status(404).send('Stream not active');
+});
 
 
 async function startServer() {
