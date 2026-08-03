@@ -37,8 +37,11 @@ export const getCandidateFlvUrls = (streamKey: string): string[] => {
   const rtmpUrl = getStoredRtmpServerUrl();
   const urls: string[] = [];
 
-  // App relative proxy paths
+  // App relative proxy paths (HTTPS safe - avoids Mixed Content blocking)
   urls.push(`/live/${cleanKey}.flv`);
+  urls.push(`/live/${cleanKey}.flv?flvHost=streamlify.in:8001`);
+  urls.push(`/live/${cleanKey}.flv?flvHost=streamlify.in:8000`);
+  urls.push(`/live/${cleanKey}.flv?flvHost=3.93.170.184:8001`);
   urls.push(`/live?port=1935&app=live&stream=${cleanKey}`);
 
   // Parse hostname/IP from stored custom RTMP URL if user entered custom AWS/EC2 IP
@@ -46,6 +49,8 @@ export const getCandidateFlvUrls = (streamKey: string): string[] => {
     const match = rtmpUrl.match(/rtmp:\/\/([^/:]+)/);
     if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
       const host = match[1];
+      urls.push(`/live/${cleanKey}.flv?flvHost=${host}:8001`);
+      urls.push(`/live/${cleanKey}.flv?flvHost=${host}:8000`);
       urls.push(`http://${host}:8001/live/${cleanKey}.flv`);
       urls.push(`http://${host}:8001/live?port=1935&app=live&stream=${cleanKey}`);
       urls.push(`http://${host}:8000/live/${cleanKey}.flv`);
@@ -53,6 +58,13 @@ export const getCandidateFlvUrls = (streamKey: string): string[] => {
       urls.push(`https://${host}/live/${cleanKey}.flv`);
     }
   } catch (e) {}
+
+  // AWS EC2 Public IP (3.93.170.184) endpoints
+  urls.push(`/live/${cleanKey}.flv?flvHost=3.93.170.184:8000`);
+  urls.push(`http://3.93.170.184:8001/live/${cleanKey}.flv`);
+  urls.push(`http://3.93.170.184:8001/live?port=1935&app=live&stream=${cleanKey}`);
+  urls.push(`http://3.93.170.184:8000/live/${cleanKey}.flv`);
+  urls.push(`http://3.93.170.184/live/${cleanKey}.flv`);
 
   // Streamlify.in direct domain endpoints (HTTPS and HTTP)
   urls.push(`https://streamlify.in/live/${cleanKey}.flv`);

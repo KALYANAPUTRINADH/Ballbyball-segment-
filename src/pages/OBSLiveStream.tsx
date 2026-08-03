@@ -181,10 +181,10 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                   <Server className="w-5 h-5 flex-shrink-0 text-purple-400 mt-0.5" />
                   <div className="space-y-1.5">
                     <p className="font-bold text-white text-sm">
-                      AWS EC2 / Custom RTMP Ingest Connection
+                      Streamlify.in RTMP Ingest Connection
                     </p>
                     <p className="text-purple-200/90 leading-relaxed">
-                      Enter your AWS EC2 Public IP or RTMP Server URL below (e.g. <code className="bg-black/60 text-emerald-400 px-1 py-0.5 rounded font-mono">rtmp://YOUR-EC2-IP:1935/live</code>).
+                      Server URL: <code className="bg-black/60 text-emerald-400 px-1.5 py-0.5 rounded font-mono">rtmp://streamlify.in:1935/live</code>
                     </p>
                     <p className="text-purple-300/80 text-[11px]">
                       ⚡ Ensure Inbound TCP Ports <strong className="text-white">1935 (RTMP)</strong> and <strong className="text-white">8001 (FLV)</strong> are open in your AWS Security Group.
@@ -202,7 +202,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                       type="text" 
                       value={rtmpServerUrl} 
                       onChange={(e) => handleServerUrlChange(e.target.value)}
-                      placeholder="e.g. rtmp://3.120.x.x:1935/live"
+                      placeholder="rtmp://streamlify.in:1935/live"
                       className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-emerald-400 flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
                     />
                     <button 

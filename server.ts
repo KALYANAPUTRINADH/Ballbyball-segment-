@@ -1301,13 +1301,20 @@ if (!_global.__NMS_STARTED__) {
 
 app.use(createProxyMiddleware({
   pathFilter: '/live',
-  target: process.env.FLV_SERVER_URL || 'http://127.0.0.1:8001',
+  target: process.env.FLV_SERVER_URL || 'http://streamlify.in:8001',
+  router: (req: any) => {
+    const hostQuery = req.query?.flvHost as string;
+    if (hostQuery && /^[a-zA-Z0-9.-]+(:[0-9]+)?$/.test(hostQuery)) {
+      return `http://${hostQuery}`;
+    }
+    return process.env.FLV_SERVER_URL || 'http://streamlify.in:8001';
+  },
   changeOrigin: true,
   ws: true,
   on: {
     error: (err, req, res: any) => {
-      if (res && typeof res.status === 'function') {
-        res.status(502).json({ error: 'Live streaming server is offline' });
+      if (res && typeof res.status === 'function' && !res.headersSent) {
+        res.status(502).json({ error: 'Live streaming server is offline or stream key is not active' });
       }
     }
   }
