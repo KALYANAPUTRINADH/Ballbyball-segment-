@@ -1,94 +1,92 @@
 import React, { useEffect, useRef, useState } from 'react';
-import flvjs from 'flv.js';
+import Hls from 'hls.js';
 import { AlertCircle } from 'lucide-react';
 
 export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, onStatsUpdate?: (stats: any) => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<flvjs.Player | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(true);
 
   useEffect(() => {
     let retryTimeout: any;
 
-    if (!flvjs.isSupported()) {
+    if (!Hls.isSupported() && videoRef.current && !videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       setIsSupported(false);
-      setError('FLV.js is not supported in this browser.');
+      setError('HLS is not supported in this browser.');
       return;
     }
 
-    const initPlayer = async () => {
-      if (videoRef.current) {
-        try {
-          // Prevent FLV.js from crashing on HTML error pages by doing a pre-flight check
-          try {
-            const res = await fetch(`https://streamlify.in/live/${streamKey}.flv`, { method: 'HEAD' });
-            const contentType = res.headers.get('content-type');
-            if (!res.ok || (contentType && contentType.includes('text/html'))) {
-              setError("Waiting for OBS stream to start. Ensure you are streaming to the correct key.");
-              retryTimeout = setTimeout(initPlayer, 5000);
-              return;
-            }
-          } catch (e) {
-            setError("Waiting for OBS stream to start. Ensure you are streaming to the correct key.");
-            retryTimeout = setTimeout(initPlayer, 5000);
-            return;
-          }
+    const src = streamKey.includes('http') ? streamKey : `https://streamlify.in/hls/${streamKey}.m3u8`;
 
-          const player = flvjs.createPlayer({
-            type: 'flv',
-            url: `https://streamlify.in/live/${streamKey}.flv`,
-            isLive: true,
-            hasAudio: true,
-            hasVideo: true,
+    const initPlayer = () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      try {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            manifestLoadingMaxRetry: 2,
+            manifestLoadingRetryDelay: 3000,
           });
           
-          player.attachMediaElement(videoRef.current);
-          player.load();
+          hlsRef.current = hls;
+          hls.loadSource(src);
+          hls.attachMedia(video);
           
-          const playPromise = player.play() as Promise<void> | undefined;
-          if (playPromise !== undefined) {
-            playPromise.catch(e => {
-              console.log("Auto-play prevented by browser. User must click play.", e);
-            });
-          }
-          playerRef.current = player;
-          
-          player.on(flvjs.Events.ERROR, (errType, errDetail) => {
-            console.warn('FLV Player Event:', errType, errDetail);
-            setError("Waiting for OBS stream to start. Ensure you are streaming to the correct key.");
-            
-            // Destroy the broken player to prevent flv.js internal setInterval crashes (currentURL null error)
-            if (playerRef.current) {
-              try {
-                playerRef.current.pause();
-                playerRef.current.unload();
-                playerRef.current.detachMediaElement();
-                playerRef.current.destroy();
-              } catch (e) {
-                console.error("Error destroying player:", e);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setError(null);
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.log("Auto-play prevented by browser.", e);
+              });
+            }
+          });
+
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.warn("HLS Network Error, retrying...", data);
+                  setError("Waiting for stream to start. Ensure you are streaming to the correct key.");
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.warn("HLS Media Error, recovering...", data);
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  console.warn("HLS Fatal Error, destroying...", data);
+                  hls.destroy();
+                  
+                  if (retryTimeout) clearTimeout(retryTimeout);
+                  retryTimeout = setTimeout(initPlayer, 5000);
+                  break;
               }
-              playerRef.current = null;
             }
-
-            // Retry connecting after 3 seconds
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = src;
+          video.addEventListener('loadedmetadata', () => {
+            setError(null);
+            video.play().catch(e => console.log('Auto-play prevented', e));
+          });
+          video.addEventListener('error', () => {
+            setError("Waiting for stream to start. Ensure you are streaming to the correct key.");
             if (retryTimeout) clearTimeout(retryTimeout);
-            retryTimeout = setTimeout(initPlayer, 3000);
+            retryTimeout = setTimeout(() => {
+              if (videoRef.current) {
+                videoRef.current.src = src;
+                videoRef.current.load();
+              }
+            }, 5000);
           });
-          
-          player.on(flvjs.Events.MEDIA_INFO, () => {
-             setError(null);
-          });
-          
-          player.on(flvjs.Events.STATISTICS_INFO, (stats) => {
-            if (onStatsUpdate) {
-              onStatsUpdate(stats);
-            }
-          });
-          
-        } catch (err) {
-          console.error('Error initializing FLV player:', err);
         }
+      } catch (err) {
+        console.error('Error initializing HLS player:', err);
       }
     };
 
@@ -96,16 +94,9 @@ export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, o
 
     return () => {
       if (retryTimeout) clearTimeout(retryTimeout);
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.unload();
-          playerRef.current.detachMediaElement();
-          playerRef.current.destroy();
-        } catch (e) {
-          console.error("Error destroying player:", e);
-        }
-        playerRef.current = null;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
   }, [streamKey]);
@@ -114,7 +105,7 @@ export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, o
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-neutral-400 p-6 text-center">
         <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
-        <p>Your browser does not support FLV video playback.</p>
+        <p>Your browser does not support HLS video playback.</p>
       </div>
     );
   }
@@ -139,3 +130,4 @@ export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, o
     </div>
   );
 };
+

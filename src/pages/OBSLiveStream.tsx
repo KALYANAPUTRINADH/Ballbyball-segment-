@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { WebcamStream } from '../components/WebcamStream';
-import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save, AlertTriangle } from 'lucide-react';
+import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 import { useToast } from '../components/ToastContext';
@@ -11,7 +11,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
   const { user } = useAuth();
   const { showToast } = useToast();
   
-  const [streamMode, setStreamMode] = useState<'rtmp' | 'virtual_camera'>('virtual_camera');
+  const [streamMode, setStreamMode] = useState<'rtmp' | 'virtual_camera'>('rtmp');
   const [streamKey, setStreamKey] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeStreamKey, setActiveStreamKey] = useState<string>(''); // The one passed to VideoPlayer
@@ -144,7 +144,34 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
         
         <div className="space-y-6">
           {streamMode === 'rtmp' && (
-            <StreamHealthMonitor stats={streamStats} isLive={!!streamStats && streamStats.speed > 0} />
+            <>
+              <StreamHealthMonitor stats={streamStats} isLive={!!streamStats && streamStats.speed > 0} />
+              <div className="bg-amber-950/40 border border-amber-800/60 p-4 rounded-xl text-xs text-amber-200 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-400 text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Getting "Failed to connect to server" in OBS?</span>
+                </div>
+                <p className="text-amber-200/90 leading-relaxed">
+                  If OBS shows <strong>"Failed to connect to server"</strong> when clicking Start Streaming, your network/firewall is blocking custom RTMP server ports or the ingest domain is unreachable.
+                </p>
+                <div className="space-y-2 pt-1 text-xs">
+                  <div className="bg-neutral-950/80 p-2.5 rounded-lg border border-amber-900/50">
+                    <span className="font-bold text-emerald-400 block mb-0.5">Method A: OBS Virtual Camera (Instant & Recommended)</span>
+                    <p className="text-neutral-300">
+                      1. In OBS, click <strong className="text-white">Start Virtual Camera</strong> (bottom right panel).<br />
+                      2. Switch tab above to <strong className="text-white">Virtual Camera</strong> mode and select <em>OBS Virtual Camera</em>. Zero server connection needed!
+                    </p>
+                  </div>
+                  <div className="bg-neutral-950/80 p-2.5 rounded-lg border border-amber-900/50">
+                    <span className="font-bold text-blue-400 block mb-0.5">Method B: Stream via YouTube RTMPS</span>
+                    <p className="text-neutral-300">
+                      1. In OBS Settings &gt; Stream, select <strong className="text-white">YouTube - RTMPS</strong> and paste your YouTube Stream Key.<br />
+                      2. Click <strong className="text-white">Start Streaming</strong> in OBS, then paste the YouTube URL into the Match Settings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
           
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 shadow-lg">
@@ -178,22 +205,10 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                   <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
                   <div className="space-y-2">
                     <p>
-                      <strong>Cloud Environment Notice:</strong> This preview runs in a secure cloud container that restricts incoming RTMP ports.
+                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
                     </p>
                     <p>
-                      To broadcast from your local OBS Studio, we strongly recommend using the <strong>Virtual Camera</strong> setup above, or export this app to run locally.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-red-950/40 border border-red-900/60 p-4 rounded-lg mb-6 text-sm text-red-200 flex gap-3 shadow-inner">
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-400" />
-                  <div className="space-y-2">
-                    <p>
-                      <strong>Connection Error in OBS?</strong> The public RTMP server (streamlify.in) is currently unavailable or a placeholder.
-                    </p>
-                    <p>
-                      To stream, please select the <strong>Virtual Camera</strong> option at the top instead, or stream directly to YouTube and paste your YouTube URL in the match broadcast settings.
+                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
                     </p>
                   </div>
                 </div>
