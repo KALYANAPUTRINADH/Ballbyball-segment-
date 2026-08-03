@@ -1303,14 +1303,14 @@ app.use('/live', createProxyMiddleware({
 
 
 async function startServer() {
-  const isProduction = process.env.NODE_ENV === "production" || process.argv[1]?.endsWith('server.cjs');
+  const isProduction = process.env.NODE_ENV === "production" || process.env.PM2_HOME !== undefined || process.argv.some(arg => arg.includes('server.cjs'));
   if (!isProduction) {
     const vite = await import("vite");
     const viteServer = await vite.createServer({
       server: { 
         middlewareMode: true,
         hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
-        allowedHosts: true
+        allowedHosts: ['streamlify.in', 'www.streamlify.in', 'localhost']
       },
       appType: "spa",
     });
