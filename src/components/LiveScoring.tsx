@@ -1672,29 +1672,21 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
               <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted />
             ) : isReceivingWebRTC ? (
               <video ref={viewerVideoRef} className="absolute inset-0 w-full h-full object-cover" autoPlay playsInline controls />
-            ) : youtubeUrl ? (
-              youtubeUrl.includes('.flv') ? (
-                <VideoPlayer streamKey={youtubeUrl.split('/').pop()?.replace('.flv', '') || ''} />
-              ) : youtubeUrl.includes('.m3u8') || youtubeUrl.includes('.mp4') ? (
-                <HlsPlayer src={youtubeUrl} />
-              ) : (
-                <iframe
-                  src={getEmbedUrl(youtubeUrl)}
-                  className="absolute inset-0 w-full h-full"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                ></iframe>
-              )
-            ) : (
-              <div className={`absolute inset-0 flex flex-col items-center justify-center text-slate-500 px-6 text-center ${isBroadcastMode ? 'bg-[#00FF00]' : 'bg-slate-900'}`}>
-                {!isBroadcastMode && <Video className="w-12 h-12 mb-4 opacity-50" />}
-                <p>{isBroadcastMode ? 'Green Screen Active - Optimized for OBS Chroma Key' : isOwner ? 'Start Camera or Connect YouTube' : 'Stream Not Available. The broadcaster has not started the stream yet or the Stream URL is not configured.'}</p>
-                {isOwner && !isBroadcastMode && (
-                  <button onClick={() => setShowBroadcastModal(true)} className="mt-4 bg-[#d11a2a] text-white px-6 py-2 rounded-full font-bold flex items-center space-x-2 hover:bg-red-700 transition-colors">
-                    <Radio className="w-4 h-4" /> <span>Broadcast Setup</span>
-                  </button>
-                )}
+            ) : (youtubeUrl && (youtubeUrl.includes('youtube.com') || youtubeUrl.includes('youtu.be'))) ? (
+              <iframe
+                src={getEmbedUrl(youtubeUrl)}
+                className="absolute inset-0 w-full h-full"
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              ></iframe>
+            ) : (youtubeUrl && (youtubeUrl.includes('.m3u8') || youtubeUrl.includes('.mp4'))) ? (
+              <HlsPlayer src={youtubeUrl} />
+            ) : isBroadcastMode ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 px-6 text-center bg-[#00FF00]">
+                <p>Green Screen Active - Optimized for OBS Chroma Key</p>
               </div>
+            ) : (
+              <VideoPlayer streamKey={youtubeUrl || obsStreamKey || (matchId ? `obs_${matchId}` : 'live_stream')} />
             )}
   
             

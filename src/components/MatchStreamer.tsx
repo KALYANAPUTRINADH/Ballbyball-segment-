@@ -33,7 +33,7 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
     setStoredRtmpServerUrl(val);
   };
 
-  const streamKey = `obs_${matchId}`;
+  const streamKey = matchData?.youtubeUrl || matchData?.streamKey || `obs_${matchId}`;
 
   useEffect(() => {
     if (!matchId) return;
