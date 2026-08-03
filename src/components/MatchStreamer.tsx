@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Settings, MonitorPlay, Copy, Check, Info } from 'lucide-react';
+import { X, Settings, MonitorPlay, Copy, Check, Info, Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ScoreboardWidget } from './ScoreboardWidget';
 import { ShareButton } from './ShareButton';
 import { dbService } from '../lib/database';
 import { VideoPlayer } from './VideoPlayer';
+import { getStoredRtmpServerUrl, setStoredRtmpServerUrl } from '../lib/streamConfig';
 
 export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string, setFullScreenView: (v: string | null) => void }) {
   const { user, isAdmin } = useAuth();
@@ -25,7 +26,13 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
   const [copiedKey, setCopiedKey] = useState(false);
   const [showSettings, setShowSettings] = useState(isOwner);
 
-  const rtmpServerUrl = 'rtmp://streamlify.in:1935/live';
+  const [rtmpServerUrl, setRtmpServerUrlState] = useState(() => getStoredRtmpServerUrl());
+
+  const handleServerUrlChange = (val: string) => {
+    setRtmpServerUrlState(val);
+    setStoredRtmpServerUrl(val);
+  };
+
   const streamKey = `obs_${matchId}`;
 
   useEffect(() => {
@@ -120,13 +127,17 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">OBS RTMP Server URL</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">OBS RTMP Server URL / AWS EC2 Host</label>
+                    <span className="text-[10px] text-purple-400 font-semibold">Editable</span>
+                  </div>
                   <div className="flex rounded-lg shadow-sm">
                     <input 
                       type="text" 
-                      readOnly 
                       value={rtmpServerUrl} 
-                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
+                      onChange={(e) => handleServerUrlChange(e.target.value)}
+                      placeholder="e.g. rtmp://3.120.x.x:1935/live"
+                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-emerald-400 flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
                     />
                     <button 
                       onClick={() => handleCopy(rtmpServerUrl, 'server')}

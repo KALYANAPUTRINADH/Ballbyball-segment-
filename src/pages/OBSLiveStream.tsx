@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { WebcamStream } from '../components/WebcamStream';
-import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save } from 'lucide-react';
+import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save, Server } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 import { useToast } from '../components/ToastContext';
+import { getStoredRtmpServerUrl, setStoredRtmpServerUrl } from '../lib/streamConfig';
 
 export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView?: (v: string | null) => void }) {
   const { user } = useAuth();
@@ -42,6 +43,11 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
     fetchStreamKey();
   }, [user]);
 
+  const handleStreamKeyChange = (val: string) => {
+    setStreamKey(val);
+    setActiveStreamKey(val);
+  };
+
   const handleSaveStreamKey = async () => {
     if (!user || !user.uid) {
       showToast('You must be logged in to save the stream key.');
@@ -70,8 +76,12 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
   const [copiedServer, setCopiedServer] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const isCloudEnvironment = typeof window !== 'undefined' && window.location.hostname.includes('run.app');
-  const rtmpServerUrl = 'rtmp://streamlify.in:1935/live';
+  const [rtmpServerUrl, setRtmpServerUrlState] = useState(() => getStoredRtmpServerUrl());
+
+  const handleServerUrlChange = (val: string) => {
+    setRtmpServerUrlState(val);
+    setStoredRtmpServerUrl(val);
+  };
 
   const handleCopy = (text: string, type: 'server' | 'key') => {
     navigator.clipboard.writeText(text);
@@ -120,11 +130,10 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4 flex flex-col">
           <div className="flex-1 min-h-[400px] bg-black rounded-lg overflow-hidden border border-neutral-800 shadow-xl relative flex flex-col">
-            {streamMode === 'rtmp' ? (
-              <VideoPlayer streamKey={activeStreamKey} />
-            ) : (
-              <WebcamStream />
-            )}
+            <VideoPlayer 
+              streamKey={activeStreamKey} 
+              defaultMode={streamMode === 'virtual_camera' ? 'camera' : 'flv'} 
+            />
             
             <div className="absolute top-4 left-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded tracking-wider animate-pulse shadow-md z-20">
               LIVE
@@ -168,26 +177,33 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-blue-950/40 border border-blue-900/60 p-4 rounded-lg mb-6 text-sm text-blue-200 flex gap-3 shadow-inner">
-                  <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
-                  <div className="space-y-2">
-                    <p>
-                      <strong>Cloud Environment Notice:</strong> This preview runs in a secure cloud container that restricts incoming RTMP ports.
+                <div className="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 border border-purple-800/60 p-4 rounded-xl mb-4 text-xs text-purple-200 flex gap-3 shadow-lg">
+                  <Server className="w-5 h-5 flex-shrink-0 text-purple-400 mt-0.5" />
+                  <div className="space-y-1.5">
+                    <p className="font-bold text-white text-sm">
+                      AWS EC2 / Custom RTMP Ingest Connection
                     </p>
-                    <p>
-                      To broadcast from your local OBS Studio, you must <strong>export this app</strong> (via the Settings menu) and run it on your local machine using <code>npm run dev</code>.
+                    <p className="text-purple-200/90 leading-relaxed">
+                      Enter your AWS EC2 Public IP or RTMP Server URL below (e.g. <code className="bg-black/60 text-emerald-400 px-1 py-0.5 rounded font-mono">rtmp://YOUR-EC2-IP:1935/live</code>).
+                    </p>
+                    <p className="text-purple-300/80 text-[11px]">
+                      ⚡ Ensure Inbound TCP Ports <strong className="text-white">1935 (RTMP)</strong> and <strong className="text-white">8001 (FLV)</strong> are open in your AWS Security Group.
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">OBS RTMP Server URL</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">OBS RTMP Server URL / AWS EC2 Ingest</label>
+                    <span className="text-[10px] text-purple-400 font-semibold">Editable</span>
+                  </div>
                   <div className="flex rounded-lg shadow-sm">
                     <input 
                       type="text" 
-                      readOnly 
                       value={rtmpServerUrl} 
-                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
+                      onChange={(e) => handleServerUrlChange(e.target.value)}
+                      placeholder="e.g. rtmp://3.120.x.x:1935/live"
+                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-emerald-400 flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
                     />
                     <button 
                       onClick={() => handleCopy(rtmpServerUrl, 'server')}
@@ -203,7 +219,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                     <input 
                       type="text" 
                       value={streamKey} 
-                      onChange={(e) => setStreamKey(e.target.value)}
+                      onChange={(e) => handleStreamKeyChange(e.target.value)}
                       placeholder="Enter your OBS stream key"
                       className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
                     />

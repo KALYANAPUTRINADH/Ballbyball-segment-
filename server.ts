@@ -1299,8 +1299,9 @@ if (!_global.__NMS_STARTED__) {
 }
 
 
-app.use('/live', createProxyMiddleware({
-  target: 'http://127.0.0.1:8001',
+app.use(createProxyMiddleware({
+  pathFilter: '/live',
+  target: process.env.FLV_SERVER_URL || 'http://127.0.0.1:8001',
   changeOrigin: true,
   ws: true,
   on: {

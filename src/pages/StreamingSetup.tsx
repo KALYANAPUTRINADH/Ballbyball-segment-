@@ -3,11 +3,12 @@ import {
   Tv, Key, Copy, Check, RefreshCw, Eye, EyeOff, Info, Sliders, 
   MonitorPlay, ExternalLink, AlertCircle, Terminal, Wifi, Settings, 
   Activity, FileText, Layout, Zap, Sparkles, Play, Square, ChevronRight,
-  X, Download
+  X, Download, Server
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ToastContext';
 import { dbService } from '../lib/database';
+import { getStoredRtmpServerUrl, setStoredRtmpServerUrl } from '../lib/streamConfig';
 
 export default function StreamingSetup({ setFullScreenView }: { setFullScreenView?: (view: string | null) => void }) {
   const { user } = useAuth();
@@ -164,8 +165,12 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
     }
   };
 
-  const isCloudEnvironment = typeof window !== 'undefined' && window.location.hostname.includes('run.app');
-  const rtmpServerUrl = 'rtmp://streamlify.in:1935/live';
+  const [rtmpServerUrl, setRtmpServerUrlState] = useState(() => getStoredRtmpServerUrl());
+
+  const handleServerUrlChange = (val: string) => {
+    setRtmpServerUrlState(val);
+    setStoredRtmpServerUrl(val);
+  };
   
   const scoreboardOverlayUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?overlay=true`
@@ -410,18 +415,22 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
               <span>OBS Studio Step-by-Step Setup Guide</span>
             </button>
 
-            {/* Ingest Server URL */}
+            {/* Ingest Server URL / AWS EC2 Host */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RTMP Ingest Server URL</label>
-                <span className="text-[10px] text-slate-400 font-medium">For OBS Custom Stream Settings</span>
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-purple-600" />
+                  RTMP Ingest Server URL / AWS EC2 Host
+                </label>
+                <span className="text-[10px] text-purple-600 font-bold uppercase">Editable</span>
               </div>
               <div className="flex rounded-lg shadow-sm">
                 <input 
                   type="text" 
-                  readOnly 
                   value={rtmpServerUrl} 
-                  className="bg-slate-50 border border-slate-200 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-slate-700 flex-1 focus:outline-none" 
+                  onChange={(e) => handleServerUrlChange(e.target.value)}
+                  placeholder="e.g. rtmp://3.120.x.x:1935/live"
+                  className="bg-slate-50 border border-slate-200 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-purple-900 flex-1 focus:outline-none focus:ring-1 focus:ring-purple-500" 
                 />
                 <button 
                   onClick={() => handleCopy(rtmpServerUrl, 'server')}
@@ -430,6 +439,9 @@ export default function StreamingSetup({ setFullScreenView }: { setFullScreenVie
                   {copiedServer ? <Check className="w-4 h-4" /> : 'Copy'}
                 </button>
               </div>
+              <p className="text-[10px] text-slate-500 leading-tight">
+                💡 Enter your AWS EC2 Public IP address (e.g. <code className="text-purple-700 font-semibold bg-slate-100 px-1 py-0.5 rounded">rtmp://YOUR-EC2-IP:1935/live</code>) to stream directly from OBS Studio to EC2.
+              </p>
             </div>
 
             {/* Stream Key */}

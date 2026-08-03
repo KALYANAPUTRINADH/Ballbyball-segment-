@@ -8,6 +8,7 @@ import { VisualWagonWheel } from './VisualWagonWheel';
 import { ShareImageCard } from './ShareImageCard';
 import { ScoreboardWidget } from './ScoreboardWidget';
 import { VideoPlayer } from './VideoPlayer';
+import { getStoredRtmpServerUrl } from '../lib/streamConfig';
 import Hls from 'hls.js';
 
 
@@ -3721,7 +3722,7 @@ Viewers`}
                   </button>
                   <button 
                     onClick={() => {
-                        const defaultRtmp = 'rtmp://streamlify.in:1935/live';
+                        const defaultRtmp = getStoredRtmpServerUrl();
                         setStreamDestination('streamlify');
                         setStreamSettings({...streamSettings, rtmpUrl: defaultRtmp, rtmpKey: 'obs_' + (user?.uid ? user.uid.slice(0, 8) : 'stream')});
                     }}
