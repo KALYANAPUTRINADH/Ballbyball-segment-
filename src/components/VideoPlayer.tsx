@@ -17,9 +17,24 @@ export const VideoPlayer = ({ streamKey, onStatsUpdate }: { streamKey: string, o
       return;
     }
 
-    const initPlayer = () => {
+    const initPlayer = async () => {
       if (videoRef.current) {
         try {
+          // Prevent FLV.js from crashing on HTML error pages by doing a pre-flight check
+          try {
+            const res = await fetch(`https://streamlify.in/live/${streamKey}.flv`, { method: 'HEAD' });
+            const contentType = res.headers.get('content-type');
+            if (!res.ok || (contentType && contentType.includes('text/html'))) {
+              setError("Waiting for OBS stream to start. Ensure you are streaming to the correct key.");
+              retryTimeout = setTimeout(initPlayer, 5000);
+              return;
+            }
+          } catch (e) {
+            setError("Waiting for OBS stream to start. Ensure you are streaming to the correct key.");
+            retryTimeout = setTimeout(initPlayer, 5000);
+            return;
+          }
+
           const player = flvjs.createPlayer({
             type: 'flv',
             url: `https://streamlify.in/live/${streamKey}.flv`,

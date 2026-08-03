@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { WebcamStream } from '../components/WebcamStream';
-import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save } from 'lucide-react';
+import { Settings, Info, MonitorPlay, Copy, Check, Video, Radio, Save, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 import { useToast } from '../components/ToastContext';
@@ -11,7 +11,7 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
   const { user } = useAuth();
   const { showToast } = useToast();
   
-  const [streamMode, setStreamMode] = useState<'rtmp' | 'virtual_camera'>('rtmp');
+  const [streamMode, setStreamMode] = useState<'rtmp' | 'virtual_camera'>('virtual_camera');
   const [streamKey, setStreamKey] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeStreamKey, setActiveStreamKey] = useState<string>(''); // The one passed to VideoPlayer
@@ -178,10 +178,22 @@ export default function OBSLiveStream({ setFullScreenView }: { setFullScreenView
                   <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
                   <div className="space-y-2">
                     <p>
-                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
+                      <strong>Cloud Environment Notice:</strong> This preview runs in a secure cloud container that restricts incoming RTMP ports.
                     </p>
                     <p>
-                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
+                      To broadcast from your local OBS Studio, we strongly recommend using the <strong>Virtual Camera</strong> setup above, or export this app to run locally.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-red-950/40 border border-red-900/60 p-4 rounded-lg mb-6 text-sm text-red-200 flex gap-3 shadow-inner">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-400" />
+                  <div className="space-y-2">
+                    <p>
+                      <strong>Connection Error in OBS?</strong> The public RTMP server (streamlify.in) is currently unavailable or a placeholder.
+                    </p>
+                    <p>
+                      To stream, please select the <strong>Virtual Camera</strong> option at the top instead, or stream directly to YouTube and paste your YouTube URL in the match broadcast settings.
                     </p>
                   </div>
                 </div>

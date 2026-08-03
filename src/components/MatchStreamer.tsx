@@ -153,60 +153,25 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
                   <Info className="w-5 h-5 flex-shrink-0 text-blue-400" />
                   <div className="space-y-2">
                     <p>
-                      <strong>Privacy & Storage Notice:</strong> We do not store or process your video stream in our backend or databases. All video is handled entirely via secure RTMP relay.
+                      <strong>Cloud Environment Notice:</strong> This app is running in a secure cloud preview environment that does not expose the RTMP ports (1935) needed to receive direct video streams from OBS.
                     </p>
                     <p>
-                      To save your broadcast, you can configure OBS Studio to stream to YouTube in parallel (using OBS's Multi-RTMP output), where YouTube can safely store the recording.
+                      To broadcast this match, please stream directly to <strong>YouTube Live</strong> using OBS, and then paste your YouTube video link in the match settings so viewers can watch it here.
                     </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">OBS RTMP Server URL</label>
-                  <div className="flex rounded-lg shadow-sm">
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value={rtmpServerUrl} 
-                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
-                    />
-                    <button 
-                      onClick={() => handleCopy(rtmpServerUrl, 'server')}
-                      className={`px-3 py-2 border border-neutral-800 border-l rounded-r-lg text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center justify-center min-w-[70px] ${copiedServer ? 'text-emerald-500 bg-emerald-950/30' : 'text-neutral-400 bg-neutral-950'}`}
-                    >
-                      {copiedServer ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Stream Key</label>
-                  <div className="flex rounded-lg shadow-sm">
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value={streamKey} 
-                      className="bg-neutral-950 border border-neutral-800 border-r-0 rounded-l-lg p-2.5 text-xs font-mono text-green-400 flex-1 focus:outline-none" 
-                    />
-                    <button 
-                      onClick={() => handleCopy(streamKey, 'key')}
-                      className={`px-3 py-2 border border-neutral-800 border-l rounded-r-lg text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center justify-center min-w-[70px] ${copiedKey ? 'text-emerald-500 bg-emerald-950/30' : 'text-neutral-400 bg-neutral-950'}`}
-                    >
-                      {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </button>
                   </div>
                 </div>
 
                 <div className="bg-neutral-950/50 p-4 rounded-lg border border-neutral-800 mt-6">
                   <h4 className="text-white font-bold mb-3 flex items-center gap-2 text-sm">
-                    <MonitorPlay className="w-4 h-4" /> OBS Settings Setup
+                    <MonitorPlay className="w-4 h-4" /> How to Broadcast
                   </h4>
                   <ol className="list-decimal pl-4 space-y-2 text-xs text-neutral-400">
                     <li>Open OBS Studio settings.</li>
                     <li>Go to the <strong>Stream</strong> tab.</li>
-                    <li>Set Service to <strong>Custom...</strong></li>
-                    <li>Paste the Server URL and Stream Key.</li>
+                    <li>Set Service to <strong>YouTube - RTMPS</strong>.</li>
+                    <li>Connect your YouTube account or paste your YouTube stream key.</li>
                     <li>Click <strong>Start Streaming</strong> in OBS.</li>
+                    <li>Go to the Match details page in this app and save your YouTube URL in the Broadcast settings.</li>
                   </ol>
                 </div>
               </div>
