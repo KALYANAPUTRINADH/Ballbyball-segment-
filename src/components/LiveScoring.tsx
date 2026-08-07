@@ -171,8 +171,12 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAwardsModal, setShowAwardsModal] = useState(false);
   const config = getSportConfig(sportType);
-  const squadA = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('match_team_a_squad') || '[]') : [];
-  const squadB = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('match_team_b_squad') || '[]') : [];
+  const initialSquadA = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('match_team_a_squad') || '[]') : [];
+  const initialSquadB = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('match_team_b_squad') || '[]') : [];
+  const [teamAPlaying11, setTeamAPlaying11] = useState<string[]>(initialSquadA);
+  const [teamBPlaying11, setTeamBPlaying11] = useState<string[]>(initialSquadB);
+  const squadA = teamAPlaying11.length > 0 ? teamAPlaying11 : initialSquadA;
+  const squadB = teamBPlaying11.length > 0 ? teamBPlaying11 : initialSquadB;
   const [followOn, setFollowOn] = useState(savedState?.followOn ?? false);
   let battingSquad = innings % 2 !== 0 ? squadA : squadB;
   let bowlingSquad = innings % 2 !== 0 ? squadB : squadA;
@@ -573,18 +577,31 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         if (data.showStreamScoreboard !== undefined) setShowStreamScoreboard(data.showStreamScoreboard);
         if (data.streamSyncDelaySeconds !== undefined) setStreamSyncDelaySeconds(data.streamSyncDelaySeconds);
 
+        // Sync teams and format
+        if (data.teamA || data.team_a) setTeamA(data.teamA || data.team_a);
+        if (data.teamB || data.team_b) setTeamB(data.teamB || data.team_b);
+        if (data.sportType || data.sport_type) setSportType(data.sportType || data.sport_type);
+        if (data.matchFormat) setMatchFormat(data.matchFormat);
+        if (data.teamAPlaying11) setTeamAPlaying11(data.teamAPlaying11);
+        if (data.teamBPlaying11) setTeamBPlaying11(data.teamBPlaying11);
+
         // Always sync from firestore on first load to prevent data loss on refresh, then only viewers sync continuously
         if (!hasSyncedFromFirebaseRef.current || !user?.uid || (user.uid !== data.ownerId && user.uid !== data.owner_id && user.uid !== data.created_by)) {
           hasSyncedFromFirebaseRef.current = true;
           // If viewer, sync states from firestore
           if (data.runs !== undefined) setRuns(data.runs);
           if (data.wickets !== undefined) setWickets(data.wickets);
-          if (data.overs_bowled !== undefined) setOvers(data.overs_bowled);
+          if (data.overs !== undefined) setOvers(data.overs);
+          else if (data.overs_bowled !== undefined) setOvers(data.overs_bowled);
           if (data.balls !== undefined) setBalls(data.balls);
           if (data.thisOver) setThisOver(data.thisOver);
+          if (data.striker) setStriker(data.striker);
+          if (data.nonStriker) setNonStriker(data.nonStriker);
+          if (data.bowler) setBowler(data.bowler);
           if (data.strikerStats) setStrikerStats(data.strikerStats);
           if (data.nonStrikerStats) setNonStrikerStats(data.nonStrikerStats);
           if (data.bowlerStats) setBowlerStats(data.bowlerStats);
+          if (data.playerStats) setPlayerStats(data.playerStats);
           if (data.shotData) setShotData(data.shotData);
           
           if (data.activeBadge) setActiveBadge(data.activeBadge);
@@ -920,6 +937,52 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
     setNonStrikerStats(finalNonStrikerStats);
     setBowlerStats(newBowlerStats);
 
+    const updatedPlayerStats = JSON.parse(JSON.stringify(playerStats || {}));
+    const sport = sportType || 'Cricket';
+
+    if (striker) {
+      if (!updatedPlayerStats[striker]) updatedPlayerStats[striker] = {};
+      if (!updatedPlayerStats[striker][sport]) updatedPlayerStats[striker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
+      const currentStats = striker === finalStriker ? finalStrikerStats : finalNonStrikerStats;
+      updatedPlayerStats[striker][sport] = {
+        ...updatedPlayerStats[striker][sport],
+        runs: currentStats.runs,
+        balls: currentStats.balls,
+        fours: currentStats.fours,
+        sixes: currentStats.sixes,
+        matches: 1
+      };
+    }
+
+    if (nonStriker) {
+      if (!updatedPlayerStats[nonStriker]) updatedPlayerStats[nonStriker] = {};
+      if (!updatedPlayerStats[nonStriker][sport]) updatedPlayerStats[nonStriker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
+      const currentStats = nonStriker === finalNonStriker ? finalNonStrikerStats : finalStrikerStats;
+      updatedPlayerStats[nonStriker][sport] = {
+        ...updatedPlayerStats[nonStriker][sport],
+        runs: currentStats.runs,
+        balls: currentStats.balls,
+        fours: currentStats.fours,
+        sixes: currentStats.sixes,
+        matches: 1
+      };
+    }
+
+    if (bowler) {
+      if (!updatedPlayerStats[bowler]) updatedPlayerStats[bowler] = {};
+      if (!updatedPlayerStats[bowler][sport]) updatedPlayerStats[bowler][sport] = { runsConceded: 0, overs: 0, balls: 0, wickets: 0, matches: 1 };
+      updatedPlayerStats[bowler][sport] = {
+        ...updatedPlayerStats[bowler][sport],
+        runsConceded: newBowlerStats.runs,
+        wickets: newBowlerStats.wickets,
+        balls: newBowlerStats.balls,
+        overs: Math.floor(newBowlerStats.balls / 6) + (newBowlerStats.balls % 6) / 10,
+        matches: 1
+      };
+    }
+
+    setPlayerStats(updatedPlayerStats);
+
     const isPenaltyExtra = ['WD', 'NB'].includes(type);
     const isRunExtra = ['B', 'LB'].includes(type);
     let displayType = type;
@@ -946,7 +1009,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         target,
         innings,
         isExtraTime,
-        playerStats,
+        playerStats: updatedPlayerStats,
         recentEvents,
         lastAutoSave: new Date().toISOString()
       }, sportType);
@@ -4118,6 +4181,17 @@ Viewers`}
                             }
                         }
                         
+                        // Ensure playing XI players are present in finalPlayerStats
+                        const playing11Players = [...(teamAPlaying11 || []), ...(teamBPlaying11 || []), striker, nonStriker, bowler].filter(Boolean);
+                        for (const pName of playing11Players) {
+                            if (!finalPlayerStats[pName]) finalPlayerStats[pName] = {};
+                            if (!finalPlayerStats[pName][sportType]) {
+                                finalPlayerStats[pName][sportType] = { matches: 1, runs: 0, wickets: 0, balls: 0 };
+                            } else {
+                                finalPlayerStats[pName][sportType].matches = 1;
+                            }
+                        }
+
                         // Set matches = 1 for everyone involved in playerStats
                         Object.keys(finalPlayerStats).forEach(p => {
                             if (finalPlayerStats[p][sportType]) {

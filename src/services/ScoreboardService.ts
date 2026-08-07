@@ -160,19 +160,19 @@ class ScoreboardService {
   getSchemaForSport(sportType: string): string[] {
     switch(sportType?.toLowerCase()) {
       case 'cricket':
-        return ['runs', 'wickets', 'overs', 'balls', 'striker', 'nonStriker', 'bowler', 'target', 'innings', 'thisOver', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries', 'matchFormat', 'inningsScores'];
+        return ['runs', 'wickets', 'overs', 'balls', 'striker', 'nonStriker', 'bowler', 'target', 'innings', 'thisOver', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries', 'matchFormat', 'inningsScores', 'teamAPlaying11', 'teamBPlaying11', 'playerStats'];
       case 'football':
       case 'basketball':
       case 'hockey':
-        return ['scoreA', 'scoreB', 'period', 'isExtraTime'];
+        return ['scoreA', 'scoreB', 'period', 'isExtraTime', 'teamAPlaying11', 'teamBPlaying11', 'playerStats'];
       case 'tennis':
       case 'volleyball':
       case 'badminton':
       case 'pickleball':
       case 'table tennis':
-        return ['scoreA', 'scoreB', 'setsA', 'setsB', 'gamePointsA', 'gamePointsB', 'isRallyScoring'];
+        return ['scoreA', 'scoreB', 'setsA', 'setsB', 'gamePointsA', 'gamePointsB', 'isRallyScoring', 'teamAPlaying11', 'teamBPlaying11', 'playerStats'];
       default:
-        return ['scoreA', 'scoreB'];
+        return ['scoreA', 'scoreB', 'teamAPlaying11', 'teamBPlaying11', 'playerStats'];
     }
   }
 
@@ -185,7 +185,16 @@ class ScoreboardService {
     const filtered: Partial<ScoreboardUpdate> = {};
     
     // Always allow base fields
-    const baseFields = ['sportType', 'playerStats', 'teamA', 'teamB', 'status', 'youtubeUrl', 'liveStreamOption', 'viewersCount', 'ownerId', 'is_live', 'isLive', 'webrtc_peer_id', 'lastAction', 'recentEvents', 'history', 'shotData', 'clips', 'activeBadge', 'lastAutoSave', 'umpireSignal', 'showStreamScoreboard', 'streamSyncDelaySeconds'];
+    const baseFields = [
+      'sportType', 'sport_type', 'playerStats', 'teamA', 'teamB', 'team_a', 'team_b',
+      'status', 'youtubeUrl', 'liveStreamOption', 'viewersCount', 'ownerId', 'owner_id', 'created_by',
+      'is_live', 'isLive', 'webrtc_peer_id', 'lastAction', 'recentEvents', 'history', 'shotData',
+      'clips', 'activeBadge', 'lastAutoSave', 'umpireSignal', 'showStreamScoreboard',
+      'streamSyncDelaySeconds', 'teamAPlaying11', 'teamBPlaying11', 'location', 'tossWinner',
+      'tossChoice', 'matchFormat', 'awards', 'overs', 'balls', 'runs', 'wickets', 'striker',
+      'nonStriker', 'bowler', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries',
+      'thisOver', 'innings', 'inningsScores', 'target', 'scoreA', 'scoreB', 'setsA', 'setsB', 'period', 'winner', 'result'
+    ];
     
     for (const key of Object.keys(updates)) {
       if (allowedFields.includes(key) || baseFields.includes(key)) {

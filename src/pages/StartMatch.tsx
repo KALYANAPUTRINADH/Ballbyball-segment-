@@ -457,9 +457,17 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
                         location: matchData.location,
                         owner_id: matchData.ownerId,
                         ownerId: matchData.ownerId,
+                        created_by: user.uid,
                         status: matchData.status,
                         sport_type: sportType,
+                        sportType: sportType,
                         youtubeUrl: matchData.youtubeUrl,
+                        liveStreamOption: matchData.liveStreamOption,
+                        teamAPlaying11: teamAPlaying11 || [],
+                        teamBPlaying11: teamBPlaying11 || [],
+                        striker: striker || '',
+                        nonStriker: nonStriker || '',
+                        bowler: bowler || '',
                         created_at: new Date().toISOString()
                       });
                     } catch(e) { console.warn('Firestore match save error', e); }
