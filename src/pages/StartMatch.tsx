@@ -418,10 +418,11 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
                 localStorage.removeItem('prefill_team_b');
                 localStorage.removeItem('prefill_sport_type');
 
-                setFullScreenView('Match Scoring');
+                const docId = String(Date.now());
+                localStorage.setItem('active_match_id', docId);
                 
-                try {
-                  if (user) {
+                if (user) {
+                  try {
                     const matchData = {
                       teamA: teamA || 'Team A',
                       teamB: teamB || 'Team B',
@@ -441,44 +442,40 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
                       teamBPlaying11,
                       createdAt: Date.now()
                     };
-                    const docId = String(Date.now());
                     
-                    try {
-                      await dbService.create('matches', {
-                        id: docId,
-                        team_a: matchData.teamA,
-                        team_b: matchData.teamB,
-                        teamA: matchData.teamA,
-                        teamB: matchData.teamB,
-                        tossWinner: matchData.tossWinner,
-                        tossChoice: matchData.tossChoice,
-                        overs: matchData.overs,
-                        matchFormat: matchData.matchFormat,
-                        location: matchData.location,
-                        owner_id: matchData.ownerId,
-                        ownerId: matchData.ownerId,
-                        created_by: user.uid,
-                        status: matchData.status,
-                        sport_type: sportType,
-                        sportType: sportType,
-                        youtubeUrl: matchData.youtubeUrl,
-                        liveStreamOption: matchData.liveStreamOption,
-                        teamAPlaying11: teamAPlaying11 || [],
-                        teamBPlaying11: teamBPlaying11 || [],
-                        striker: striker || '',
-                        nonStriker: nonStriker || '',
-                        bowler: bowler || '',
-                        created_at: new Date().toISOString()
-                      });
-                    } catch(e) { console.warn('Firestore match save error', e); }
-                    
-
-                    // Notifications logic removed
-                    localStorage.setItem('active_match_id', docId);
+                    await dbService.create('matches', {
+                      id: docId,
+                      team_a: matchData.teamA,
+                      team_b: matchData.teamB,
+                      teamA: matchData.teamA,
+                      teamB: matchData.teamB,
+                      tossWinner: matchData.tossWinner,
+                      tossChoice: matchData.tossChoice,
+                      overs: matchData.overs,
+                      matchFormat: matchData.matchFormat,
+                      location: matchData.location,
+                      owner_id: matchData.ownerId,
+                      ownerId: matchData.ownerId,
+                      created_by: user.uid,
+                      status: matchData.status,
+                      sport_type: sportType,
+                      sportType: sportType,
+                      youtubeUrl: matchData.youtubeUrl,
+                      liveStreamOption: matchData.liveStreamOption,
+                      teamAPlaying11: teamAPlaying11 || [],
+                      teamBPlaying11: teamBPlaying11 || [],
+                      striker: striker || '',
+                      nonStriker: nonStriker || '',
+                      bowler: bowler || '',
+                      created_at: new Date().toISOString()
+                    });
+                  } catch(e) { 
+                    console.warn('Firestore match save error', e); 
+                    alert("Could not save match online. Running in local mode.");
                   }
-                } catch(e) {
-                  console.warn("Failed to save match to firestore:", e);
                 }
+                
+                setFullScreenView('Match Scoring');
               }}
               className="w-full py-4 bg-[#d11a2a] hover:bg-red-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-red-500/30 transition-all active:scale-95"
             >
