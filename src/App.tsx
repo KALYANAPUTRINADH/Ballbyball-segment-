@@ -79,11 +79,36 @@ export default function App() {
       ? localStorage.getItem("last_tab") || "home"
       : "home",
   );
-  const [fullScreenView, setFullScreenView] = useState<string | null>(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("last_fullscreen")
-      : null,
-  );
+
+  const getInitialFullScreen = () => {
+    if (typeof window === "undefined") return null;
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlMatchId = searchParams.get('matchId') || searchParams.get('match') || 
+      (window.location.pathname.startsWith('/match/') ? window.location.pathname.split('/match/')[1] : null);
+    
+    if (urlMatchId) {
+      localStorage.setItem("active_match_id", urlMatchId);
+      return searchParams.get('stream') === 'true' ? "Match Streamer" : "Match Scoring";
+    }
+    return localStorage.getItem("last_fullscreen");
+  };
+
+  const [fullScreenView, setFullScreenView] = useState<string | null>(getInitialFullScreen);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlMatchId = searchParams.get('matchId') || searchParams.get('match') || 
+        (window.location.pathname.startsWith('/match/') ? window.location.pathname.split('/match/')[1] : null);
+      
+      if (urlMatchId) {
+        localStorage.setItem("active_match_id", urlMatchId);
+        if (!fullScreenView) {
+          setFullScreenView(searchParams.get('stream') === 'true' ? "Match Streamer" : "Match Scoring");
+        }
+      }
+    }
+  }, []);
   const handleSetFullScreenView = (view: string | null) => {
     const proFeatures = [
       "My Performance",

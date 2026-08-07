@@ -107,14 +107,14 @@ const MyCricket = ({ setFullScreenView }: { setFullScreenView: (v: string) => vo
 
   const filteredMatches = matches.filter(m => {
     // 1. Sport filter
-    const matchesSport = activeSport === 'All' ? true : (m.sport_type || 'Cricket') === activeSport;
+    const matchesSport = activeSport === 'All' ? true : (m.sport_type || m.sportType || 'Cricket').toLowerCase() === activeSport.toLowerCase();
     if (!matchesSport) return false;
 
     // 2. Tab category filter
     if (activeFilter === 'Your') {
-      return m.owner_id === user?.uid || m.created_by === user?.uid;
+      return m.owner_id === user?.uid || m.created_by === user?.uid || m.ownerId === user?.uid;
     } else if (activeFilter === 'Played' || activeFilter === 'Network') {
-      return m.owner_id !== user?.uid && m.created_by !== user?.uid;
+      return m.owner_id !== user?.uid && m.created_by !== user?.uid && m.ownerId !== user?.uid;
     }
     return true; // 'All'
   });
@@ -315,8 +315,16 @@ const MyCricket = ({ setFullScreenView }: { setFullScreenView: (v: string) => vo
                   )}
               </div>
             )) : (
-              <div className="col-span-full py-10 text-center text-gray-500">
-                No matches found. Start a match to see it here!
+              <div className="col-span-full py-10 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-200 p-6">
+                <p className="text-sm font-medium mb-3">No matches found in this view.</p>
+                {activeFilter === 'Your' && (
+                  <button 
+                    onClick={() => setActiveFilter('All')} 
+                    className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm"
+                  >
+                    View All Community Matches
+                  </button>
+                )}
               </div>
             )}
           </div>

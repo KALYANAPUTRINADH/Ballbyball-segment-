@@ -161,7 +161,18 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   const [recentEvents, setRecentEvents] = useState<any[]>(savedState?.recentEvents ?? []);
   const [scorerName, setScorerName] = useState('');
   const [assistName, setAssistName] = useState('');
-  const [matchId, setMatchId] = useState(typeof window !== 'undefined' ? localStorage.getItem('active_match_id') : null);
+  const getInitialMatchId = () => {
+    if (typeof window === 'undefined') return null;
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlMatchId = searchParams.get('matchId') || searchParams.get('match') || 
+      (window.location.pathname.startsWith('/match/') ? window.location.pathname.split('/match/')[1] : null);
+    if (urlMatchId) {
+      localStorage.setItem('active_match_id', urlMatchId);
+      return urlMatchId;
+    }
+    return localStorage.getItem('active_match_id');
+  };
+  const [matchId, setMatchId] = useState<string | null>(getInitialMatchId);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [scoreboardTheme, setScoreboardTheme] = useState(typeof window !== 'undefined' ? localStorage.getItem('scoreboard_theme') || 'modern' : 'modern');
   const [isOwner, setIsOwner] = useState(false);

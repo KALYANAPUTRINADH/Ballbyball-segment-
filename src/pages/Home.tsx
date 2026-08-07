@@ -89,11 +89,11 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
     
     // Subscribe to matches in real-time
     const unsubscribe = dbService.subscribe('matches', {}, (data) => {
-      // Sort descending by created_at or updated_at or id
+      // Sort descending by created_at or updated_at or numeric ID
       const sorted = [...data].sort((a, b) => {
-        const timeA = a.created_at || a.updated_at || a.id || '';
-        const timeB = b.created_at || b.updated_at || b.id || '';
-        return String(timeB).localeCompare(String(timeA));
+        const timeA = new Date(a.created_at || a.updated_at || Number(a.id) || 0).getTime() || Number(a.id) || 0;
+        const timeB = new Date(b.created_at || b.updated_at || Number(b.id) || 0).getTime() || Number(b.id) || 0;
+        return timeB - timeA;
       });
       setAllMatches(sorted);
       
@@ -335,11 +335,11 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                 <button className="text-teal-600 text-sm font-semibold hover:text-teal-800 transition-colors" onClick={() => showToast('Showing all matches...')}>View All</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || 'Cricket') === activeSport) && (m.location && m.location.toLowerCase().includes(location.toLowerCase()))).map(match => (
+                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || m.sportType || 'Cricket').toLowerCase() === activeSport.toLowerCase()) && (m.location && m.location.toLowerCase().includes(location.toLowerCase()))).map(match => (
                   <div key={match.id} className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                     localStorage.setItem('active_match_id', match.id);
-                    localStorage.setItem('match_team_a', match.teamA || '');
-                    localStorage.setItem('match_team_b', match.teamB || '');
+                    localStorage.setItem('match_team_a', match.teamA || match.team_a || '');
+                    localStorage.setItem('match_team_b', match.teamB || match.team_b || '');
                     localStorage.setItem('match_overs', match.overs || '');
                     localStorage.setItem('match_location', match.location || '');
                     localStorage.setItem('match_toss_winner', match.tossWinner || '');
@@ -355,35 +355,35 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                     
                     <div className="p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500 truncate">{(match.sportType || match.sport_type) !== 'Cricket' ? (match.sportType || match.sport_type || 'Match') : `Match • ${match.overs} Overs`}</span>
+                        <span className="text-xs text-gray-500 truncate">{(match.sportType || match.sport_type) !== 'Cricket' ? (match.sportType || match.sport_type || 'Match') : `Match • ${match.overs || 20} Overs`}</span>
                         <span className="bg-[#d11a2a] text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse">Live</span>
                       </div>
                       <div className="space-y-2 mb-4 mt-3">
-                        {(match.sportType || match.sport_type) !== 'Cricket' && (match.sportType || match.sport_type) ? (
+                        {(match.sportType || match.sport_type) && (match.sportType || match.sport_type).toLowerCase() !== 'cricket' ? (
                           <>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA || match.team_a || 'Team A'}</span>
                               <span className="text-lg font-black text-slate-800">{match.scoreA || 0}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB || match.team_b || 'Team B'}</span>
                               <span className="text-lg font-black text-slate-800">{match.scoreB || 0}</span>
                             </div>
                           </>
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA}</span>
-                              <span className="text-sm font-semibold text-gray-900">{match.runs || 0}/{match.wickets || 0} <span className="text-xs font-normal text-gray-500">({match.overs_bowled || 0}.{match.balls || 0} Ov)</span></span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA || match.team_a || 'Team A'}</span>
+                              <span className="text-sm font-semibold text-gray-900">{match.runs || 0}/{match.wickets || 0} <span className="text-xs font-normal text-gray-500">({match.overs_bowled || match.overs || 0}.{match.balls || 0} Ov)</span></span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB || match.team_b || 'Team B'}</span>
                               <span className="text-sm font-semibold text-gray-500">Yet to bat</span>
                             </div>
                           </>
                         )}
                       </div>
-                      {(!match.sportType || match.sportType === 'Cricket' || match.sport_type === 'Cricket') && (
+                      {(!match.sportType || match.sportType?.toLowerCase() === 'cricket' || match.sport_type?.toLowerCase() === 'cricket') && (
                         <>
                           {(match.striker || match.bowler) && (
                             <div className="flex justify-between items-center text-[11px] font-medium text-slate-600 mb-2 bg-slate-50 px-2 py-1 rounded border border-slate-100">
@@ -408,7 +408,7 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                   </div>
                 ))}
                 
-                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || 'Cricket') === activeSport) && (m.location && m.location.toLowerCase().includes(location.toLowerCase()))).length === 0 && (
+                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || m.sportType || 'Cricket').toLowerCase() === activeSport.toLowerCase()) && (m.location && m.location.toLowerCase().includes(location.toLowerCase()))).length === 0 && (
                   <div className="col-span-full py-4 text-center text-gray-500 text-sm bg-white rounded-lg border border-dashed border-gray-200">
                     No matches found near {location}.
                   </div>
@@ -419,11 +419,11 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                 <h2 className="text-base font-bold text-gray-900">All Live Matches</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || 'Cricket') === activeSport) && (!m.location || !m.location.toLowerCase().includes(location.toLowerCase()))).map(match => (
+                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || m.sportType || 'Cricket').toLowerCase() === activeSport.toLowerCase()) && (!m.location || !m.location.toLowerCase().includes(location.toLowerCase()))).map(match => (
                   <div key={match.id} className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 cursor-pointer hover:shadow-md transition-shadow" onClick={() => {
                     localStorage.setItem('active_match_id', match.id);
-                    localStorage.setItem('match_team_a', match.teamA || '');
-                    localStorage.setItem('match_team_b', match.teamB || '');
+                    localStorage.setItem('match_team_a', match.teamA || match.team_a || '');
+                    localStorage.setItem('match_team_b', match.teamB || match.team_b || '');
                     localStorage.setItem('match_overs', match.overs || '');
                     localStorage.setItem('match_location', match.location || '');
                     localStorage.setItem('match_toss_winner', match.tossWinner || '');
@@ -439,35 +439,35 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                     
                     <div className="p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500 truncate">{(match.sportType || match.sport_type) !== 'Cricket' ? (match.sportType || match.sport_type || 'Match') : `Match • ${match.overs} Overs`}</span>
+                        <span className="text-xs text-gray-500 truncate">{(match.sportType || match.sport_type) !== 'Cricket' ? (match.sportType || match.sport_type || 'Match') : `Match • ${match.overs || 20} Overs`}</span>
                         <span className="bg-[#d11a2a] text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-pulse">Live</span>
                       </div>
                       <div className="space-y-2 mb-4 mt-3">
-                        {(match.sportType || match.sport_type) !== 'Cricket' && (match.sportType || match.sport_type) ? (
+                        {(match.sportType || match.sport_type) && (match.sportType || match.sport_type).toLowerCase() !== 'cricket' ? (
                           <>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA || match.team_a || 'Team A'}</span>
                               <span className="text-lg font-black text-slate-800">{match.scoreA || 0}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB || match.team_b || 'Team B'}</span>
                               <span className="text-lg font-black text-slate-800">{match.scoreB || 0}</span>
                             </div>
                           </>
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA}</span>
-                              <span className="text-sm font-semibold text-gray-900">{match.runs || 0}/{match.wickets || 0} <span className="text-xs font-normal text-gray-500">({match.overs_bowled || 0}.{match.balls || 0} Ov)</span></span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamA || match.team_a || 'Team A'}</span>
+                              <span className="text-sm font-semibold text-gray-900">{match.runs || 0}/{match.wickets || 0} <span className="text-xs font-normal text-gray-500">({match.overs_bowled || match.overs || 0}.{match.balls || 0} Ov)</span></span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB}</span>
+                              <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{match.teamB || match.team_b || 'Team B'}</span>
                               <span className="text-sm font-semibold text-gray-500">Yet to bat</span>
                             </div>
                           </>
                         )}
                       </div>
-                      {(!match.sportType || match.sportType === 'Cricket' || match.sport_type === 'Cricket') && (
+                      {(!match.sportType || match.sportType?.toLowerCase() === 'cricket' || match.sport_type?.toLowerCase() === 'cricket') && (
                         <>
                           {(match.striker || match.bowler) && (
                             <div className="flex justify-between items-center text-[11px] font-medium text-slate-600 mb-2 bg-slate-50 px-2 py-1 rounded border border-slate-100">
@@ -492,7 +492,7 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
                   </div>
                 ))}
                 
-                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || 'Cricket') === activeSport) && (!m.location || !m.location.toLowerCase().includes(location.toLowerCase()))).length === 0 && (
+                {allMatches.filter(m => (activeSport === 'All' ? true : (m.sport_type || m.sportType || 'Cricket').toLowerCase() === activeSport.toLowerCase()) && (!m.location || !m.location.toLowerCase().includes(location.toLowerCase()))).length === 0 && (
                   <div className="col-span-full py-8 text-center text-gray-500 text-sm bg-white rounded-lg border border-dashed border-gray-200">
                     No other live matches right now.
                   </div>
