@@ -110,7 +110,7 @@ export function PaymentModal({ amount, description, onSuccess, onClose }: Paymen
                 const token = await user.getIdToken();
                 
               const expiryDate = new Date();
-              if (amount === 399 || amount > 100) {
+              if (amount === 999 || amount > 100) {
                 expiryDate.setFullYear(expiryDate.getFullYear() + 1);
               } else {
                 expiryDate.setMonth(expiryDate.getMonth() + 1);

@@ -21,7 +21,7 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
       alert('Please sign in to upgrade to Pro.');
       return;
     }
-    const amount = selectedPlan === 'monthly' ? 49 : 399;
+    const amount = selectedPlan === 'monthly' ? 99 : 999;
     const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
 
     const expiryDate = new Date();
@@ -54,7 +54,7 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
   const handleStripeCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 49 : 399;
+      const amount = selectedPlan === 'monthly' ? 99 : 999;
       const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
 
       const res = await fetch('/api/stripe/create-checkout-session', {
@@ -82,7 +82,7 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
   const handleRazorpayCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 49 : 399;
+      const amount = selectedPlan === 'monthly' ? 99 : 999;
       const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
 
       const res = await fetch('/api/payments/razorpay/create-order', {
@@ -179,8 +179,8 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
               }`}
             >
               <div className="font-bold text-sm">Monthly Plan</div>
-              <div className="text-xl font-black mt-1">₹49<span className="text-xs font-normal text-slate-500"> / mo</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">($0.59 USD)</div>
+              <div className="text-xl font-black mt-1">₹99<span className="text-xs font-normal text-slate-500"> / mo</span></div>
+              <div className="text-[10px] text-slate-400 mt-1">($1.19 USD)</div>
             </button>
 
             <button
@@ -195,8 +195,8 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
                 Best Value
               </span>
               <div className="font-bold text-sm">Yearly Plan</div>
-              <div className="text-xl font-black mt-1">₹399<span className="text-xs font-normal text-slate-500"> / yr</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">($4.81 USD)</div>
+              <div className="text-xl font-black mt-1">₹999<span className="text-xs font-normal text-slate-500"> / yr</span></div>
+              <div className="text-[10px] text-slate-400 mt-1">($11.99 USD)</div>
             </button>
           </div>
 
@@ -206,14 +206,14 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
               disabled={loading}
               className="w-full py-3 px-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all flex items-center justify-center shadow-lg shadow-indigo-200"
             >
-              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹49' : '₹399'} with Razorpay (INR)`}
+              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹99' : '₹999'} with Razorpay (INR)`}
             </button>
             <button 
               onClick={handleStripeCheckout}
               disabled={loading}
               className="w-full py-3 px-4 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition-all flex items-center justify-center"
             >
-              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹49' : '₹399'} with Stripe`}
+              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹99' : '₹999'} with Stripe`}
             </button>
           </div>
           

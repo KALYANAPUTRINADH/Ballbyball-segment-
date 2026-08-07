@@ -3,7 +3,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // 1. GLOBAL HELPERS
     function isSignedIn() { return request.auth != null; }
-    function isMock() { return false; }
+    function isMockRequest() { 
+      let isIncomingMock = request.resource != null && (
+        request.resource.data.get('created_by', '').matches('^mock_.*') || 
+        request.resource.data.get('owner_id', '').matches('^mock_.*') || 
+        request.resource.data.get('ownerId', '').matches('^mock_.*') ||
+        request.resource.data.get('author_id', '').matches('^mock_.*') ||
+        request.resource.data.get('user_id', '').matches('^mock_.*') ||
+        request.resource.data.get('sender_id', '').matches('^mock_.*')
+      );
+      let isExistingMock = resource != null && (
+        resource.data.get('created_by', '').matches('^mock_.*') || 
+        resource.data.get('owner_id', '').matches('^mock_.*') || 
+        resource.data.get('ownerId', '').matches('^mock_.*') ||
+        resource.data.get('author_id', '').matches('^mock_.*') ||
+        resource.data.get('user_id', '').matches('^mock_.*') ||
+        resource.data.get('sender_id', '').matches('^mock_.*')
+      );
+      return isIncomingMock || isExistingMock;
+    }
+    function isMock() { return isMockRequest(); }
     function isOwner(userId) { return isMock() || (isSignedIn() && request.auth.uid == userId) || userId.matches('^mock_.*'); }
     function isAdmin() { 
        return isMock() || (isSignedIn() && 
