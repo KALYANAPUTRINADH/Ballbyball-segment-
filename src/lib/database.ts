@@ -47,19 +47,24 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const NO_COMPRESS_KEYS = ["id","owner_id","created_by","ownerId","author_id","user_id","status","sport_type","sportType","phone","email","role","teamId","name","type","created_at","updated_at","date","time","searchType","is_pro","pro_expiration_date","venue","title","team_a","team_b","teamA","teamB","match_id","tournament_id","player_id","club_id","mobileNumber","username","displayName"];
 
 function compressValue(val: any): any {
-  if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
-    const str = JSON.stringify(val);
-    if (str.length > 300) {
-      const compressed = LZString.compressToBase64(str);
-      if (compressed.length < str.length) {
-         return { __c: true, d: compressed, t: 'o' };
+  try {
+    if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
+      if (val.__c === true) return val;
+      const str = JSON.stringify(val);
+      if (str.length > 300) {
+        const compressed = LZString.compressToBase64(str);
+        if (compressed.length < str.length) {
+           return { __c: true, d: compressed, t: 'o' };
+        }
+      }
+    } else if (typeof val === 'string' && val.length > 300) {
+      const compressed = LZString.compressToBase64(val);
+      if (compressed.length < val.length) {
+         return { __c: true, d: compressed, t: 's' };
       }
     }
-  } else if (typeof val === 'string' && val.length > 300) {
-    const compressed = LZString.compressToBase64(val);
-    if (compressed.length < val.length) {
-       return { __c: true, d: compressed, t: 's' };
-    }
+  } catch (e) {
+    console.warn("Compression failed", e);
   }
   return val;
 }
@@ -69,35 +74,22 @@ function sanitizeAndCompressPayload(payload: any, isRoot = true): any {
   if (!payload || typeof payload !== 'object' || payload instanceof Date) return payload;
   
   if (Array.isArray(payload)) {
-    if (isRoot) {
-      return payload.map(item => sanitizeAndCompressPayload(item, false));
-    } else {
-      const cleanedArray = payload.map(item => sanitizeAndCompressPayload(item, false)).filter(item => item !== undefined);
-      return compressValue(cleanedArray);
-    }
+    const cleanedArray = payload.map(item => sanitizeAndCompressPayload(item, false)).filter(item => item !== undefined);
+    return cleanedArray;
   }
   
   const sanitized: any = {};
   Object.keys(payload).forEach(key => {
     const value = payload[key];
     if (value !== undefined) {
-      if (isRoot) {
-        if (NO_COMPRESS_KEYS.includes(key)) {
-           sanitized[key] = sanitizeAndCompressPayload(value, false);
-        } else {
-           // We clean undefined values first
-           const cleaned = sanitizeAndCompressPayload(value, false);
-           sanitized[key] = compressValue(cleaned);
-        }
+      const cleaned = sanitizeAndCompressPayload(value, false);
+      if (isRoot && !NO_COMPRESS_KEYS.includes(key)) {
+         sanitized[key] = compressValue(cleaned);
       } else {
-        sanitized[key] = sanitizeAndCompressPayload(value, false);
+         sanitized[key] = cleaned;
       }
     }
   });
-  
-  if (!isRoot) {
-    return sanitized; // Will be compressed by parent's compressValue if large
-  }
   
   return sanitized;
 }

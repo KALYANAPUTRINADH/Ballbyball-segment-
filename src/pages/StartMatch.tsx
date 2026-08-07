@@ -390,6 +390,11 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
             
             <button 
               onClick={async () => {
+                if (!user) {
+                  alert("You must be logged in to create and save a match online.");
+                  return;
+                }
+
                 if (user) {
                   const ongoingMatches = await dbService.getAll('matches', { owner_id: user.uid, status: 'Ongoing' });
                   if (ongoingMatches.length > 0) {
@@ -469,9 +474,9 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
                       bowler: bowler || '',
                       created_at: new Date().toISOString()
                     });
-                  } catch(e) { 
+                  } catch(e: any) { 
                     console.warn('Firestore match save error', e); 
-                    alert("Could not save match online. Running in local mode.");
+                    alert("Could not save match online: " + (e?.message || 'Unknown error') + ". Running in local mode.");
                   }
                 }
                 
