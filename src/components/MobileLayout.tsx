@@ -57,7 +57,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
               } else {
                 expiryDate.setMonth(expiryDate.getMonth() + 1);
               }
-              await dbService.update('profiles', user.uid, { is_pro: true, pro_expiration_date: expiryDate.toISOString() });
+              await dbService.update('profiles', user.uid, { is_pro: true, subscription_status: 'active', pro_expiration_date: expiryDate.toISOString() });
     await dbService.create('transactions', {
       user_id: user.uid,
       amount: amount,
@@ -123,7 +123,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
               } else {
                 expiryDate.setMonth(expiryDate.getMonth() + 1);
               }
-              await dbService.update('profiles', user.uid, { is_pro: true, pro_expiration_date: expiryDate.toISOString() });
+              await dbService.update('profiles', user.uid, { is_pro: true, subscription_status: 'active', pro_expiration_date: expiryDate.toISOString() });
     await dbService.create('transactions', {
       user_id: user.uid,
       amount: amount,
@@ -189,7 +189,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
         showToast('Please sign in first');
         return;
       }
-      if (true) {
+      if (isPro || isAdmin) {
         setFullScreenView('Tournament Hub');
       } else {
         setIsProOpen(true);

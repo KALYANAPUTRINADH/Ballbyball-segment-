@@ -109,14 +109,22 @@ export default function App() {
       }
     }
   }, []);
+  const proFeatures = [
+    "My Performance",
+    "Pro Dashboard",
+    "Stats",
+    "Career Stats",
+    "Performance",
+    "Tournament Hub"
+  ];
+
+  React.useEffect(() => {
+    if (fullScreenView && proFeatures.includes(fullScreenView) && !isPro && !isAdmin) {
+      setFullScreenView(null);
+    }
+  }, [isPro, isAdmin, fullScreenView]);
+
   const handleSetFullScreenView = (view: string | null) => {
-    const proFeatures = [
-      "My Performance",
-      "Pro Dashboard",
-      "Stats",
-      "Career Stats",
-      "Performance",
-    ];
     if (view && proFeatures.includes(view) && !isPro && !isAdmin) {
       setShowProModal(view);
       return;

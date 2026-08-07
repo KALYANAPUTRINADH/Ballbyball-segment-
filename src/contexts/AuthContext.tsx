@@ -107,6 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const expiryDate = new Date(profile.pro_expiration_date);
             if (expiryDate < new Date()) {
               userIsPro = false;
+              if (profile.is_pro !== false) {
+                 dbService.update('profiles', user.uid, { is_pro: false, subscription_status: 'expired' }).catch(console.error);
+              }
             }
           }
           setIsPro(userIsPro);
