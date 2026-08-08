@@ -29,6 +29,9 @@ export interface ScoreboardWidgetProps {
   theme?: string;
   isExtraTime?: boolean;
   umpireSignal?: string | null;
+  target?: number | null;
+  innings?: number;
+  inningsScores?: any[];
 }
 
 export function ScoreboardWidget({ 
@@ -56,7 +59,10 @@ export function ScoreboardWidget({
   recentEvents = [],
   theme = 'modern',
   isExtraTime = false,
-  umpireSignal = null
+  umpireSignal = null,
+  target = null,
+  innings = 1,
+  inningsScores = []
 }: ScoreboardWidgetProps) {
   const config = getSportConfig(sportType);
 
@@ -510,7 +516,9 @@ export function ScoreboardWidget({
         wickets={wickets}
         overs={overs}
         balls={balls}
-        target={null}
+        target={target}
+        innings={innings}
+        inningsScores={inningsScores}
         striker={striker}
         strikerStats={strikerStats}
         nonStriker={nonStriker}

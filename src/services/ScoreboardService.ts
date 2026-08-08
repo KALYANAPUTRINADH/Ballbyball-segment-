@@ -160,7 +160,7 @@ class ScoreboardService {
   getSchemaForSport(sportType: string): string[] {
     switch(sportType?.toLowerCase()) {
       case 'cricket':
-        return ['runs', 'wickets', 'overs', 'balls', 'striker', 'nonStriker', 'bowler', 'target', 'innings', 'thisOver', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries', 'matchFormat', 'inningsScores', 'teamAPlaying11', 'teamBPlaying11', 'playerStats'];
+        return ['runs', 'wickets', 'overs', 'balls', 'overs_bowled', 'striker', 'nonStriker', 'bowler', 'target', 'innings', 'thisOver', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries', 'matchFormat', 'inningsScores', 'teamAPlaying11', 'teamBPlaying11', 'playerStats', 'shotData', 'matchMaxOvers'];
       case 'football':
       case 'basketball':
       case 'hockey':
@@ -191,9 +191,9 @@ class ScoreboardService {
       'is_live', 'isLive', 'webrtc_peer_id', 'lastAction', 'recentEvents', 'history', 'shotData',
       'clips', 'activeBadge', 'lastAutoSave', 'umpireSignal', 'showStreamScoreboard',
       'streamSyncDelaySeconds', 'teamAPlaying11', 'teamBPlaying11', 'location', 'tossWinner',
-      'tossChoice', 'matchFormat', 'awards', 'overs', 'balls', 'runs', 'wickets', 'striker',
+      'tossChoice', 'matchFormat', 'awards', 'overs', 'overs_bowled', 'balls', 'runs', 'wickets', 'striker',
       'nonStriker', 'bowler', 'strikerStats', 'nonStrikerStats', 'bowlerStats', 'deliveries',
-      'thisOver', 'innings', 'inningsScores', 'target', 'scoreA', 'scoreB', 'setsA', 'setsB', 'period', 'winner', 'result'
+      'thisOver', 'innings', 'inningsScores', 'target', 'scoreA', 'scoreB', 'setsA', 'setsB', 'period', 'winner', 'result', 'scoreboardTheme', 'matchMaxOvers'
     ];
     
     for (const key of Object.keys(updates)) {
@@ -210,16 +210,36 @@ class ScoreboardService {
    * Since we use Firestore real-time, updating the document automatically pushes changes
    * to all connected clients (MatchStreamer, LiveScoring, etc.).
    */
+  private debounceTimers: Record<string, NodeJS.Timeout> = {};
+  private pendingUpdates: Record<string, Partial<ScoreboardUpdate>> = {};
+
   async updateScore(matchId: string, updates: Partial<ScoreboardUpdate>, sportType?: string) {
-    try {
-      const payload = sportType ? this.filterUpdateForSport(sportType, updates) : updates;
-      
-      const data = await dbService.update('matches', matchId, payload);
-      return data;
-    } catch (err) {
-      console.warn('ScoreboardService error:', err);
-      return false;
+    if (!this.pendingUpdates[matchId]) {
+      this.pendingUpdates[matchId] = {};
     }
+    
+    // Merge the new updates into our pending updates object
+    this.pendingUpdates[matchId] = { ...this.pendingUpdates[matchId], ...updates };
+
+    return new Promise((resolve) => {
+      if (this.debounceTimers[matchId]) {
+        clearTimeout(this.debounceTimers[matchId]);
+      }
+
+      this.debounceTimers[matchId] = setTimeout(async () => {
+        const payloadToSend = { ...this.pendingUpdates[matchId] };
+        this.pendingUpdates[matchId] = {};
+        
+        try {
+          const payload = sportType ? this.filterUpdateForSport(sportType, payloadToSend) : payloadToSend;
+          const data = await dbService.update('matches', matchId, payload);
+          resolve(data);
+        } catch (err) {
+          console.warn('ScoreboardService error:', err);
+          resolve(false);
+        }
+      }, 100); // 100ms debounce for rapid real-time responsiveness
+    });
   }
 
   /**

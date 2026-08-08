@@ -122,18 +122,19 @@ export function ScoreboardOverlay() {
 
       <div className="w-full max-w-6xl mx-auto pointer-events-auto scale-[1.3] origin-bottom transform space-y-4">
         <ScoreboardWidget 
+          matchId={matchData.id}
           teamA={matchData.team_a || matchData.teamA}
           teamB={matchData.team_b || matchData.teamB}
           runs={matchData.runs || 0}
           wickets={matchData.wickets || 0}
-          overs={matchData.overs_bowled || 0}
+          overs={matchData.overs || matchData.overs_bowled || 0}
           balls={matchData.balls || 0}
-          scoreA={matchData.scoreA ?? matchData.score_a ?? matchData.runs ?? 0}
-          scoreB={matchData.scoreB ?? matchData.score_b ?? matchData.wickets ?? 0}
+          scoreA={matchData.scoreA ?? matchData.score_a ?? 0}
+          scoreB={matchData.scoreB ?? matchData.score_b ?? 0}
           setsA={matchData.setsA ?? matchData.sets_a ?? 0}
           setsB={matchData.setsB ?? matchData.sets_b ?? 0}
           period={matchData.period ?? 1}
-          sportType={matchData.sport_type || 'Cricket'}
+          sportType={matchData.sportType || matchData.sport_type || 'Cricket'}
           striker={matchData.striker}
           strikerStats={matchData.strikerStats}
           nonStriker={matchData.nonStriker}
@@ -142,6 +143,9 @@ export function ScoreboardOverlay() {
           bowlerStats={matchData.bowlerStats}
           thisOver={matchData.thisOver}
           theme={displayTheme}
+          target={matchData.target}
+          innings={matchData.innings}
+          inningsScores={matchData.inningsScores}
           className="w-full shadow-2xl border border-white/20"
         />
         

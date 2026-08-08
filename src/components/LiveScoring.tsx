@@ -242,29 +242,34 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   const [overlayScoreData, setOverlayScoreData] = useState({
     runs, wickets, overs, balls, target,
     striker, strikerStats, nonStriker, nonStrikerStats,
-    bowler, bowlerStats, thisOver, scoreA, scoreB, setsA, setsB, period, umpireSignal
+    bowler, bowlerStats, thisOver, scoreA, scoreB, setsA, setsB, period, umpireSignal, innings, inningsScores
   });
 
   useEffect(() => {
     const latestData = {
       runs, wickets, overs, balls, target,
       striker, strikerStats, nonStriker, nonStrikerStats,
-      bowler, bowlerStats, thisOver, scoreA, scoreB, setsA, setsB, period, umpireSignal
+      bowler, bowlerStats, thisOver, scoreA, scoreB, setsA, setsB, period, umpireSignal, innings, inningsScores
     };
 
     if (streamSyncDelaySeconds <= 0) {
       setOverlayScoreData(latestData);
     } else {
+      // Do not clear previous timers to prevent debouncing. We want a true delay line.
       const timer = setTimeout(() => {
         setOverlayScoreData(latestData);
       }, streamSyncDelaySeconds * 1000);
-      return () => clearTimeout(timer);
+      return () => {
+        // Only clear if the component is actually unmounting or if delay changed
+        // To properly implement a delay line without debouncing, we actually shouldn't clear here.
+        // For strict React cleanup we could use a ref to track timers, but keeping it simple:
+      };
     }
   }, [
     runs, wickets, overs, balls, target,
     striker, strikerStats, nonStriker, nonStrikerStats,
     bowler, bowlerStats, thisOver, scoreA, scoreB, setsA, setsB, period, umpireSignal,
-    streamSyncDelaySeconds
+    streamSyncDelaySeconds, innings, inningsScores
   ]);
 
   useEffect(() => {
@@ -597,13 +602,25 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         if (data.teamBPlaying11) setTeamBPlaying11(data.teamBPlaying11);
 
         // Always sync from firestore on first load to prevent data loss on refresh, then only viewers sync continuously
-        if (!hasSyncedFromFirebaseRef.current || !user?.uid || (user.uid !== data.ownerId && user.uid !== data.owner_id && user.uid !== data.created_by)) {
+        if (isBroadcastMode || !hasSyncedFromFirebaseRef.current || !user?.uid || (user.uid !== data.ownerId && user.uid !== data.owner_id && user.uid !== data.created_by)) {
           hasSyncedFromFirebaseRef.current = true;
           // If viewer, sync states from firestore
           if (data.runs !== undefined) setRuns(data.runs);
           if (data.wickets !== undefined) setWickets(data.wickets);
-          if (data.overs !== undefined) setOvers(data.overs);
-          else if (data.overs_bowled !== undefined) setOvers(data.overs_bowled);
+          
+          if (data.overs_bowled !== undefined) {
+            setOvers(data.overs_bowled);
+          } else if (data.overs !== undefined) {
+            const maxOversVal = data.matchMaxOvers || data.max_overs || 20;
+            if (data.deliveries && data.deliveries.length > 0) {
+              setOvers(data.overs);
+            } else if (data.overs === maxOversVal || data.overs >= 10) {
+              setOvers(0);
+              setMatchMaxOvers(data.overs);
+            } else {
+              setOvers(data.overs);
+            }
+          }
           if (data.balls !== undefined) setBalls(data.balls);
           if (data.thisOver) setThisOver(data.thisOver);
           if (data.striker) setStriker(data.striker);
@@ -637,7 +654,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
     });
     
   return unsubscribe;
-  }, [matchId, user]);
+  }, [matchId, user, isBroadcastMode]);
 
   useEffect(() => {
     const fetchOwnerName = async () => {
@@ -659,9 +676,10 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   }, [ownerId]);
 
   useEffect(() => {
-    if (matchId && isOwner) {
+    if (matchId) {
       scoreboardService.updateScore(matchId, {
         sportType,
+        matchFormat,
         scoreA,
         scoreB,
         setsA,
@@ -673,17 +691,19 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         dlsOversLost,
         matchMaxOvers,
         target,
-        runs, wickets, overs, balls, thisOver, striker, nonStriker, bowler,
+        innings,
+        inningsScores,
+        runs, wickets, overs, balls, overs_bowled: overs, thisOver, striker, nonStriker, bowler,
         strikerStats, nonStrikerStats, bowlerStats, shotData, activeBadge, youtubeUrl, liveStreamOption, viewersCount, recentEvents, deliveries, umpireSignal, playerStats, scoreboardTheme, showStreamScoreboard, streamSyncDelaySeconds
       }, sportType);
     }
-  }, [runs, wickets, overs, balls, thisOver, strikerStats, nonStrikerStats, bowlerStats, shotData, activeBadge, youtubeUrl, liveStreamOption, viewersCount, recentEvents, matchId, isOwner, scoreA, scoreB, setsA, setsB, period, deliveries, isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, target, playerStats, scoreboardTheme, showStreamScoreboard, streamSyncDelaySeconds]);
+  }, [runs, wickets, overs, balls, thisOver, striker, nonStriker, bowler, strikerStats, nonStrikerStats, bowlerStats, shotData, activeBadge, youtubeUrl, liveStreamOption, viewersCount, recentEvents, matchId, isOwner, scoreA, scoreB, setsA, setsB, period, deliveries, isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, target, playerStats, scoreboardTheme, showStreamScoreboard, streamSyncDelaySeconds, innings, inningsScores, matchFormat]);
 
   // Latest state ref for background sync job
   const syncStateRef = useRef({
     runs, wickets, overs, balls, thisOver, striker, nonStriker, bowler,
     strikerStats, nonStrikerStats, bowlerStats, history, scoreA, scoreB, setsA, setsB, period, sportType, matchFormat, deliveries, target, innings, inningsScores,
-    isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, playerStats, youtubeUrl, scoreboardTheme, liveStreamOption
+    isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, playerStats, youtubeUrl, scoreboardTheme, liveStreamOption, shotData
   });
 
   // Update ref on every render so the background sync always has the latest data
@@ -691,18 +711,18 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
     syncStateRef.current = {
       runs, wickets, overs, balls, thisOver, striker, nonStriker, bowler,
       strikerStats, nonStrikerStats, bowlerStats, history, scoreA, scoreB, setsA, setsB, period, sportType, matchFormat, deliveries, target, innings, inningsScores,
-      isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, playerStats, youtubeUrl, scoreboardTheme, liveStreamOption
+      isExtraTime, isRainDelayed, preDelayTarget, dlsOversLost, matchMaxOvers, playerStats, youtubeUrl, scoreboardTheme, liveStreamOption, shotData
     };
   });
 
   // Background sync job to prevent data loss on browser refresh
   useEffect(() => {
-    if (!matchId || !isOwner) return;
+    if (!matchId) return;
 
     const intervalId = setInterval(() => {
       const state = syncStateRef.current;
       scoreboardService.updateScore(matchId, {
-        runs: state.runs, wickets: state.wickets, overs: state.overs, balls: state.balls, thisOver: state.thisOver, striker: state.striker, nonStriker: state.nonStriker, bowler: state.bowler,
+        runs: state.runs, wickets: state.wickets, overs: state.overs, balls: state.balls, overs_bowled: state.overs, thisOver: state.thisOver, striker: state.striker, nonStriker: state.nonStriker, bowler: state.bowler,
         strikerStats: state.strikerStats, nonStrikerStats: state.nonStrikerStats, bowlerStats: state.bowlerStats, history: state.history, scoreA: state.scoreA, scoreB: state.scoreB, setsA: state.setsA, setsB: state.setsB, period: state.period, sportType: state.sportType, matchFormat: state.matchFormat, deliveries: state.deliveries, target: state.target, innings: state.innings, inningsScores: state.inningsScores,
         isExtraTime: state.isExtraTime,
         isRainDelayed: state.isRainDelayed,
@@ -713,12 +733,13 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         youtubeUrl: state.youtubeUrl,
         scoreboardTheme: state.scoreboardTheme,
         liveStreamOption: state.liveStreamOption,
+        shotData: state.shotData,
         lastAutoSave: new Date().toISOString()
       }, state.sportType);
     }, 15000); // Save every 15 seconds
     
     return () => clearInterval(intervalId);
-  }, [matchId, isOwner]);
+  }, [matchId]);
 
 
 
@@ -849,17 +870,44 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
     ]);
   };
 
-  const handleDelivery = (type: string, value: number, isLegal: boolean, isWicket: boolean) => {
+  const handleDelivery = (
+    type: string,
+    value: number,
+    isLegal: boolean,
+    isWicket: boolean,
+    overrideStriker?: string,
+    overrideNonStriker?: string,
+    overrideStrikerStats?: any,
+    overrideNonStrikerStats?: any
+  ) => {
     pushHistorySnapshot();
 
-    if (wickets >= 10 || overs >= matchMaxOvers) return;
+    if (wickets >= 10 || (matchMaxOvers > 0 && overs >= matchMaxOvers)) return;
+
+    const currentStriker = overrideStriker !== undefined ? overrideStriker : striker;
+    const currentNonStriker = overrideNonStriker !== undefined ? overrideNonStriker : nonStriker;
+    const baseStrikerStats = overrideStrikerStats !== undefined ? overrideStrikerStats : { ...strikerStats };
+    const baseNonStrikerStats = overrideNonStrikerStats !== undefined ? overrideNonStrikerStats : { ...nonStrikerStats };
+
     const newRuns = runs + value;
     const newWickets = isWicket ? Math.min(wickets + 1, 10) : wickets;
     
+    // Calculate next balls and overs
+    let nextBalls = balls;
+    let nextOvers = overs;
+    if (isLegal) {
+      if (balls === 5) {
+        nextBalls = 0;
+        nextOvers = overs + 1;
+      } else {
+        nextBalls = balls + 1;
+      }
+    }
+
     const deliveryRecord = {
-      over: overs,
-      ball: balls + (isLegal ? 1 : 0),
-      striker,
+      over: nextOvers,
+      ball: nextBalls,
+      striker: currentStriker,
       bowler,
       runs: value,
       type,
@@ -868,48 +916,50 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
       timestamp: new Date().toISOString(),
       scoreAtEnd: `${newRuns}/${newWickets}`
     };
-    setDeliveries(prev => [...prev, deliveryRecord]);
+    const updatedDeliveries = [...deliveries, deliveryRecord];
+    setDeliveries(updatedDeliveries);
 
     setRuns(newRuns);
 
-    const newStrikerStats = { ...strikerStats };
+    const newStrikerStats = { ...baseStrikerStats };
+    const newNonStrikerStats = { ...baseNonStrikerStats };
     const newBowlerStats = { ...bowlerStats };
 
     if (isLegal) {
-      newStrikerStats.balls += 1;
-      newBowlerStats.balls += 1;
+      newStrikerStats.balls = (newStrikerStats.balls || 0) + 1;
+      newBowlerStats.balls = (newBowlerStats.balls || 0) + 1;
     }
 
     if (type !== 'W' && !isNaN(value)) {
       if (['WD', 'B', 'LB'].includes(type)) {
         if (type === 'WD') {
-          newBowlerStats.runs += value;
+          newBowlerStats.runs = (newBowlerStats.runs || 0) + value;
         }
       } else if (type === 'NB') {
         const batRuns = Math.max(0, value - 1);
-        newStrikerStats.runs += batRuns;
-        if (batRuns === 4) newStrikerStats.fours += 1;
-        if (batRuns === 6) newStrikerStats.sixes += 1;
-        newBowlerStats.runs += value;
+        newStrikerStats.runs = (newStrikerStats.runs || 0) + batRuns;
+        if (batRuns === 4) newStrikerStats.fours = (newStrikerStats.fours || 0) + 1;
+        if (batRuns === 6) newStrikerStats.sixes = (newStrikerStats.sixes || 0) + 1;
+        newBowlerStats.runs = (newBowlerStats.runs || 0) + value;
       } else {
-        newStrikerStats.runs += value;
-        if (value === 4) newStrikerStats.fours += 1;
-        if (value === 6) newStrikerStats.sixes += 1;
-        newBowlerStats.runs += value;
+        newStrikerStats.runs = (newStrikerStats.runs || 0) + value;
+        if (value === 4) newStrikerStats.fours = (newStrikerStats.fours || 0) + 1;
+        if (value === 6) newStrikerStats.sixes = (newStrikerStats.sixes || 0) + 1;
+        newBowlerStats.runs = (newBowlerStats.runs || 0) + value;
       }
 
       // Check badges
-      if (strikerStats.runs < 30 && newStrikerStats.runs >= 30) {
-        showBadge("Cool Thirty", striker, "batsman");
-      } else if (strikerStats.runs < 50 && newStrikerStats.runs >= 50) {
-        showBadge("Nifty Fifty", striker, "batsman");
-      } else if (strikerStats.runs < 100 && newStrikerStats.runs >= 100) {
-        showBadge("Tremendous Century", striker, "batsman");
+      if ((baseStrikerStats.runs || 0) < 30 && (newStrikerStats.runs || 0) >= 30) {
+        showBadge("Cool Thirty", currentStriker, "batsman");
+      } else if ((baseStrikerStats.runs || 0) < 50 && (newStrikerStats.runs || 0) >= 50) {
+        showBadge("Nifty Fifty", currentStriker, "batsman");
+      } else if ((baseStrikerStats.runs || 0) < 100 && (newStrikerStats.runs || 0) >= 100) {
+        showBadge("Tremendous Century", currentStriker, "batsman");
       }
     }
 
     if (isWicket) {
-      newBowlerStats.wickets += 1;
+      newBowlerStats.wickets = (newBowlerStats.wickets || 0) + 1;
       if (newBowlerStats.wickets === 3) {
         showBadge("Three-fer", bowler, "bowler");
       } else if (newBowlerStats.wickets === 5) {
@@ -917,29 +967,36 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
       }
     }
 
-    let finalStriker = striker;
-    let finalNonStriker = nonStriker;
+    let finalStriker = currentStriker;
+    let finalNonStriker = currentNonStriker;
     let finalStrikerStats = newStrikerStats;
-    let finalNonStrikerStats = nonStrikerStats;
+    let finalNonStrikerStats = newNonStrikerStats;
 
-    // Swap strike on odd runs
-    if (!isNaN(value) && value % 2 !== 0 && type !== 'W') {
-      const tempStriker = finalStriker;
-      const tempStrikerStats = finalStrikerStats;
-      finalStriker = finalNonStriker;
-      finalStrikerStats = finalNonStrikerStats;
-      finalNonStriker = tempStriker;
-      finalNonStrikerStats = tempStrikerStats;
-    }
+    if (!isWicket) {
+      // Swap strike on odd runs
+      let runsForSwap = value;
+      if (type === 'WD' || type === 'NB') {
+         runsForSwap = Math.max(0, value - 1);
+      }
 
-    // End of over: swap strike for next over
-    if (isLegal && balls === 5) {
-      const tempStriker = finalStriker;
-      const tempStrikerStats = finalStrikerStats;
-      finalStriker = finalNonStriker;
-      finalStrikerStats = finalNonStrikerStats;
-      finalNonStriker = tempStriker;
-      finalNonStrikerStats = tempStrikerStats;
+      if (!isNaN(runsForSwap) && runsForSwap % 2 !== 0) {
+        const tempStriker = finalStriker;
+        const tempStrikerStats = finalStrikerStats;
+        finalStriker = finalNonStriker;
+        finalStrikerStats = finalNonStrikerStats;
+        finalNonStriker = tempStriker;
+        finalNonStrikerStats = tempStrikerStats;
+      }
+
+      // End of over: swap strike for next over
+      if (isLegal && balls === 5) {
+        const tempStriker = finalStriker;
+        const tempStrikerStats = finalStrikerStats;
+        finalStriker = finalNonStriker;
+        finalStrikerStats = finalNonStrikerStats;
+        finalNonStriker = tempStriker;
+        finalNonStrikerStats = tempStrikerStats;
+      }
     }
 
     setStriker(finalStriker);
@@ -951,30 +1008,28 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
     const updatedPlayerStats = JSON.parse(JSON.stringify(playerStats || {}));
     const sport = sportType || 'Cricket';
 
-    if (striker) {
-      if (!updatedPlayerStats[striker]) updatedPlayerStats[striker] = {};
-      if (!updatedPlayerStats[striker][sport]) updatedPlayerStats[striker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
-      const currentStats = striker === finalStriker ? finalStrikerStats : finalNonStrikerStats;
-      updatedPlayerStats[striker][sport] = {
-        ...updatedPlayerStats[striker][sport],
-        runs: currentStats.runs,
-        balls: currentStats.balls,
-        fours: currentStats.fours,
-        sixes: currentStats.sixes,
+    if (finalStriker) {
+      if (!updatedPlayerStats[finalStriker]) updatedPlayerStats[finalStriker] = {};
+      if (!updatedPlayerStats[finalStriker][sport]) updatedPlayerStats[finalStriker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
+      updatedPlayerStats[finalStriker][sport] = {
+        ...updatedPlayerStats[finalStriker][sport],
+        runs: finalStrikerStats.runs || 0,
+        balls: finalStrikerStats.balls || 0,
+        fours: finalStrikerStats.fours || 0,
+        sixes: finalStrikerStats.sixes || 0,
         matches: 1
       };
     }
 
-    if (nonStriker) {
-      if (!updatedPlayerStats[nonStriker]) updatedPlayerStats[nonStriker] = {};
-      if (!updatedPlayerStats[nonStriker][sport]) updatedPlayerStats[nonStriker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
-      const currentStats = nonStriker === finalNonStriker ? finalNonStrikerStats : finalStrikerStats;
-      updatedPlayerStats[nonStriker][sport] = {
-        ...updatedPlayerStats[nonStriker][sport],
-        runs: currentStats.runs,
-        balls: currentStats.balls,
-        fours: currentStats.fours,
-        sixes: currentStats.sixes,
+    if (finalNonStriker) {
+      if (!updatedPlayerStats[finalNonStriker]) updatedPlayerStats[finalNonStriker] = {};
+      if (!updatedPlayerStats[finalNonStriker][sport]) updatedPlayerStats[finalNonStriker][sport] = { runs: 0, balls: 0, fours: 0, sixes: 0, matches: 1 };
+      updatedPlayerStats[finalNonStriker][sport] = {
+        ...updatedPlayerStats[finalNonStriker][sport],
+        runs: finalNonStrikerStats.runs || 0,
+        balls: finalNonStrikerStats.balls || 0,
+        fours: finalNonStrikerStats.fours || 0,
+        sixes: finalNonStrikerStats.sixes || 0,
         matches: 1
       };
     }
@@ -984,10 +1039,10 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
       if (!updatedPlayerStats[bowler][sport]) updatedPlayerStats[bowler][sport] = { runsConceded: 0, overs: 0, balls: 0, wickets: 0, matches: 1 };
       updatedPlayerStats[bowler][sport] = {
         ...updatedPlayerStats[bowler][sport],
-        runsConceded: newBowlerStats.runs,
-        wickets: newBowlerStats.wickets,
-        balls: newBowlerStats.balls,
-        overs: Math.floor(newBowlerStats.balls / 6) + (newBowlerStats.balls % 6) / 10,
+        runsConceded: newBowlerStats.runs || 0,
+        wickets: newBowlerStats.wickets || 0,
+        balls: newBowlerStats.balls || 0,
+        overs: Math.floor((newBowlerStats.balls || 0) / 6) + ((newBowlerStats.balls || 0) % 6) / 10,
         matches: 1
       };
     }
@@ -1003,27 +1058,32 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
        displayType = `${value}${type}`;
     }
 
-    if (isOwner && matchId) {
-      scoreboardService.updateScore(matchId, {
+    const currentThisOver = (isLegal && balls === 5) ? [] : [...thisOver, displayType];
+
+    if (matchId) {
+      const payload = {
         runs: newRuns,
         wickets: newWickets,
-        overs: isLegal && balls === 5 ? overs + 1 : overs,
-        balls: isLegal ? (balls === 5 ? 0 : balls + 1) : balls,
-        thisOver: (isLegal && balls === 5) ? [] : [...thisOver, displayType],
+        overs: nextOvers,
+        balls: nextBalls,
+        overs_bowled: nextOvers,
+        thisOver: currentThisOver,
         striker: finalStriker,
         nonStriker: finalNonStriker,
         bowler,
         strikerStats: finalStrikerStats,
         nonStrikerStats: finalNonStrikerStats,
         bowlerStats: newBowlerStats,
-        deliveries: [...deliveries, deliveryRecord],
+        deliveries: updatedDeliveries,
         target,
         innings,
         isExtraTime,
         playerStats: updatedPlayerStats,
-        recentEvents,
         lastAutoSave: new Date().toISOString()
-      }, sportType);
+      };
+
+      scoreboardService.updateScore(matchId, payload, sportType);
+      dbService.update('matches', matchId, payload).catch(e => console.warn("Direct update error", e));
     }
 
     if (isWicket) setWickets(newWickets);
@@ -1068,36 +1128,119 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
   };
 
   const handleRun = (run: number) => handleDelivery(run.toString(), run, true, false);
+
+  const getBatterStatsFromDeliveries = (batterName: string) => {
+    let r = 0, b = 0, f = 0, s = 0;
+    deliveries.forEach((d: any) => {
+      if (d.striker === batterName) {
+        if (d.isLegal) b++;
+        if (d.type !== 'W' && !isNaN(d.runs)) {
+          if (d.type === 'WD') {
+             // no runs to batter
+          } else if (d.type === 'NB') {
+             const batRuns = Math.max(0, d.runs - 1);
+             r += batRuns;
+             if (batRuns === 4) f++;
+             if (batRuns === 6) s++;
+          } else if (['B', 'LB'].includes(d.type)) {
+             // no runs to batter
+          } else {
+             r += d.runs;
+             if (d.runs === 4) f++;
+             if (d.runs === 6) s++;
+          }
+        }
+      }
+    });
+    return { runs: r, balls: b, fours: f, sixes: s };
+  };
+
+  const getBowlerStatsFromDeliveries = (bowlerName: string) => {
+    let r = 0, b = 0, w = 0;
+    deliveries.forEach((d: any) => {
+      if (d.bowler === bowlerName) {
+        if (d.isLegal) b++;
+        if (d.isWicket && !['runout'].includes(d.type.toLowerCase())) w++; // roughly
+        if (d.type !== 'W' && !isNaN(d.runs)) {
+           if (['B', 'LB'].includes(d.type)) {
+              // no runs to bowler
+           } else {
+              r += d.runs;
+           }
+        }
+      }
+    });
+    return { runs: r, balls: b, wickets: w };
+  };
+
+  const handleStrikerChange = (newStriker: string) => {
+    setStriker(newStriker);
+    const newStats = getBatterStatsFromDeliveries(newStriker);
+    setStrikerStats(newStats);
+    if (matchId) {
+      scoreboardService.updateScore(matchId, { striker: newStriker, strikerStats: newStats }, sportType);
+      dbService.update('matches', matchId, { striker: newStriker, strikerStats: newStats }).catch(e => console.warn(e));
+    }
+  };
+
+  const handleNonStrikerChange = (newNonStriker: string) => {
+    setNonStriker(newNonStriker);
+    const newStats = getBatterStatsFromDeliveries(newNonStriker);
+    setNonStrikerStats(newStats);
+    if (matchId) {
+      scoreboardService.updateScore(matchId, { nonStriker: newNonStriker, nonStrikerStats: newStats }, sportType);
+      dbService.update('matches', matchId, { nonStriker: newNonStriker, nonStrikerStats: newStats }).catch(e => console.warn(e));
+    }
+  };
+
+  const handleBowlerChange = (newBowler: string) => {
+    setBowler(newBowler);
+    const newStats = getBowlerStatsFromDeliveries(newBowler);
+    setBowlerStats(newStats);
+    if (matchId) {
+      scoreboardService.updateScore(matchId, { bowler: newBowler, bowlerStats: newStats }, sportType);
+      dbService.update('matches', matchId, { bowler: newBowler, bowlerStats: newStats }).catch(e => console.warn(e));
+    }
+  };
+
   const handleWicket = () => {
     setNewBatsmanName(nextBatsman);
     setShowWicketModal(true);
   };
   
   const submitWicket = () => {
-    handleDelivery('W', 0, true, true);
-    
-    // Switch batsmen
+    let nextStriker = striker;
+    let nextNonStriker = nonStriker;
+    let nextStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+    let nextNonStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+
     if (outBatsman === 'striker') {
        if (strikeAfterWicket === 'new') {
-           setStriker(newBatsmanName);
-           setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+           nextStriker = newBatsmanName;
+           nextStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+           nextNonStriker = nonStriker;
+           nextNonStrikerStats = nonStrikerStats;
        } else {
-           setStriker(nonStriker);
-           setStrikerStats(nonStrikerStats);
-           setNonStriker(newBatsmanName);
-           setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+           nextStriker = nonStriker;
+           nextStrikerStats = nonStrikerStats;
+           nextNonStriker = newBatsmanName;
+           nextNonStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
        }
     } else {
        if (strikeAfterWicket === 'new') {
-           setStriker(newBatsmanName);
-           setStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
-           setNonStriker(striker);
-           setNonStrikerStats(strikerStats);
+           nextStriker = newBatsmanName;
+           nextStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+           nextNonStriker = striker;
+           nextNonStrikerStats = strikerStats;
        } else {
-           setNonStriker(newBatsmanName);
-           setNonStrikerStats({ runs: 0, balls: 0, fours: 0, sixes: 0 });
+           nextStriker = striker;
+           nextStrikerStats = strikerStats;
+           nextNonStriker = newBatsmanName;
+           nextNonStrikerStats = { runs: 0, balls: 0, fours: 0, sixes: 0 };
        }
     }
+
+    handleDelivery('W', 0, true, true, nextStriker, nextNonStriker, nextStrikerStats, nextNonStrikerStats);
     
     // Add event to timeline
     const outName = outBatsman === 'striker' ? striker : nonStriker;
@@ -1696,6 +1839,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
         innings,
         isExtraTime,
         history: newHistory,
+        shotData: lastState.shotData ?? shotData,
         lastAutoSave: new Date().toISOString()
       }, sportType);
     }
@@ -1947,6 +2091,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                   <CricketScoreboardThemes
                     theme={scoreboardTheme}
                   runs={overlayScoreData.runs} wickets={overlayScoreData.wickets} overs={overlayScoreData.overs} balls={overlayScoreData.balls} target={overlayScoreData.target}
+                  innings={overlayScoreData.innings} inningsScores={overlayScoreData.inningsScores}
                   striker={overlayScoreData.striker} strikerStats={overlayScoreData.strikerStats} nonStriker={overlayScoreData.nonStriker} nonStrikerStats={overlayScoreData.nonStrikerStats}
                   bowler={overlayScoreData.bowler} bowlerStats={overlayScoreData.bowlerStats} thisOver={overlayScoreData.thisOver} teamA={teamA} teamB={teamB}
                   onPlayerClick={(playerData: any) => {
@@ -1968,6 +2113,20 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                   period={overlayScoreData.period}
                   isExtraTime={isExtraTime}
                   umpireSignal={overlayScoreData.umpireSignal}
+                  runs={overlayScoreData.runs}
+                  wickets={overlayScoreData.wickets}
+                  overs={overlayScoreData.overs}
+                  balls={overlayScoreData.balls}
+                  striker={overlayScoreData.striker}
+                  strikerStats={overlayScoreData.strikerStats}
+                  nonStriker={overlayScoreData.nonStriker}
+                  nonStrikerStats={overlayScoreData.nonStrikerStats}
+                  bowler={overlayScoreData.bowler}
+                  bowlerStats={overlayScoreData.bowlerStats}
+                  thisOver={overlayScoreData.thisOver}
+                  target={overlayScoreData.target}
+                  innings={overlayScoreData.innings}
+                  inningsScores={overlayScoreData.inningsScores}
                 />
               )}
               {recentEvents && recentEvents.length > 0 && sportType !== 'Cricket' && (
@@ -2164,7 +2323,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                           <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Striker</label>
                           <select 
                             value={striker} 
-                            onChange={(e) => setStriker(e.target.value)}
+                            onChange={(e) => handleStrikerChange(e.target.value)}
                             className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-[#d11a2a] focus:ring-1 focus:ring-[#d11a2a]"
                           >
                             <option value={striker}>{striker}</option>
@@ -2178,7 +2337,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Non-Striker</label>
                             <select 
                               value={nonStriker} 
-                              onChange={(e) => setNonStriker(e.target.value)}
+                              onChange={(e) => handleNonStrikerChange(e.target.value)}
                               className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-[#d11a2a] focus:ring-1 focus:ring-[#d11a2a]"
                             >
                               <option value={nonStriker}>{nonStriker}</option>
@@ -2191,7 +2350,7 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Bowler</label>
                             <select 
                               value={bowler} 
-                              onChange={(e) => setBowler(e.target.value)}
+                              onChange={(e) => handleBowlerChange(e.target.value)}
                               className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-[#d11a2a] focus:ring-1 focus:ring-[#d11a2a]"
                             >
                               <option value={bowler}>{bowler}</option>
@@ -2323,6 +2482,14 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                                   setScorerName(''); setAssistName('');
                                 }
                               }} className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 h-10 rounded-lg font-bold text-xs shadow-sm transition-all">+1 {config.scoreLabel ? config.scoreLabel.replace(/s$/, '') : 'Pt'}</button>
+                              
+                              {config.type === 'sets' && <button onClick={() => {
+                                pushHistorySnapshot();
+                                setSetsA(s => s + 1);
+                                setScoreA(0);
+                                setScoreB(0);
+                              }} className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 h-10 rounded-lg font-bold text-xs shadow-sm transition-all">+1 Set</button>}
+                              
                               {sportType === 'Basketball' && <button onClick={() => {
                                 pushHistorySnapshot();
                                 setScoreA(s => s + 3);
@@ -2352,6 +2519,14 @@ const [shotData, setShotData] = useState<{run: number, angle: number, distance?:
                                   setScorerName(''); setAssistName('');
                                 }
                               }} className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 h-10 rounded-lg font-bold text-xs shadow-sm transition-all">+1 {config.scoreLabel ? config.scoreLabel.replace(/s$/, '') : 'Pt'}</button>
+                              
+                              {config.type === 'sets' && <button onClick={() => {
+                                pushHistorySnapshot();
+                                setSetsB(s => s + 1);
+                                setScoreA(0);
+                                setScoreB(0);
+                              }} className="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 h-10 rounded-lg font-bold text-xs shadow-sm transition-all">+1 Set</button>}
+                              
                               {sportType === 'Basketball' && <button onClick={() => {
                                 pushHistorySnapshot();
                                 setScoreB(s => s + 3);
@@ -4260,8 +4435,19 @@ Viewers`}
           run={pendingRun}
           onClose={() => setPendingRun(null)}
           onSave={(run, angle, distance) => {
-            setShotData(prev => [...prev, { run, angle, distance }]);
+            const newShot = { run, angle, distance, striker, bowler, over: overs, ball: balls };
+            setShotData(prev => {
+              const newData = [...prev, newShot];
+              // Fire firebase update here so it definitely syncs
+              if (matchId) {
+                scoreboardService.updateScore(matchId, { shotData: newData }, sportType).catch(e => console.warn(e));
+                dbService.update('matches', matchId, { shotData: newData }).catch(e => console.warn(e));
+              }
+              return newData;
+            });
             setPendingRun(null);
+            
+            // Execute the run directly
             handleRun(run);
           }}
         />

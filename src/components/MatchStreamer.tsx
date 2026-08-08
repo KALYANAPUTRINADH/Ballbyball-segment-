@@ -97,8 +97,32 @@ export function MatchStreamer({ matchId, setFullScreenView }: { matchId: string,
         <div className="absolute inset-x-0 bottom-16 z-20 pointer-events-none p-4">
           <ScoreboardWidget 
             matchId={matchId} 
-             
-             
+            sportType={matchData?.sportType || matchData?.sport_type}
+            teamA={matchData?.teamA || matchData?.team_a}
+            teamB={matchData?.teamB || matchData?.team_b}
+            runs={matchData?.runs}
+            wickets={matchData?.wickets}
+            overs={matchData?.overs}
+            balls={matchData?.balls}
+            striker={matchData?.striker}
+            strikerStats={matchData?.strikerStats}
+            nonStriker={matchData?.nonStriker}
+            nonStrikerStats={matchData?.nonStrikerStats}
+            bowler={matchData?.bowler}
+            bowlerStats={matchData?.bowlerStats}
+            thisOver={matchData?.thisOver}
+            scoreA={matchData?.scoreA}
+            scoreB={matchData?.scoreB}
+            setsA={matchData?.setsA}
+            setsB={matchData?.setsB}
+            period={matchData?.period}
+            recentEvents={matchData?.recentEvents}
+            isExtraTime={matchData?.isExtraTime}
+            umpireSignal={matchData?.umpireSignal}
+            theme={matchData?.scoreboardTheme || 'modern'}
+            target={matchData?.target}
+            innings={matchData?.innings}
+            inningsScores={matchData?.inningsScores}
           />
         </div>
 

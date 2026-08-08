@@ -21,7 +21,7 @@ import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import crypto from "crypto";
 import { requireAuth, requireRole } from './src/middleware/auth.ts';
 import type { AuthRequest } from './src/middleware/auth.ts';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 
@@ -38,7 +38,7 @@ try {
 
 // Initialize Firebase Admin (still used for Auth verifyIdToken)
 if (!getApps().length) {
-  initializeApp({
+  initializeApp({ credential: applicationDefault(), 
     projectId: firebaseConfig.projectId
   });
 }

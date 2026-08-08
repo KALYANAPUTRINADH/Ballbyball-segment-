@@ -257,8 +257,8 @@ function ScorecardTab({ sportType, matchFormat, scoreA, scoreB, runs, wickets, o
 
   const allInnings = [...(inningsScores || [])];
   
-  // Create dummy active innings to render the current progress
-  if (deliveries?.length > 0 || allInnings.length === 0) {
+  // Include active ongoing innings so live score updates in parallel with the scorer panel
+  if (allInnings.length === (inningsScores || []).length) {
     allInnings.push({
       innings: allInnings.length + 1,
       runs,
@@ -302,10 +302,23 @@ function ScorecardTab({ sportType, matchFormat, scoreA, scoreB, runs, wickets, o
       }
 
       if (d.type !== 'W' && !isNaN(d.runs)) {
-         batters[bat].runs += d.runs;
-         bowlers[bowl].runsConceded += d.runs;
-         if (d.runs === 4) batters[bat].fours += 1;
-         if (d.runs === 6) batters[bat].sixes += 1;
+         if (d.type === 'WD') {
+            bowlers[bowl].runsConceded += d.runs;
+         } else if (d.type === 'NB') {
+            const batRuns = Math.max(0, d.runs - 1);
+            batters[bat].runs += batRuns;
+            bowlers[bowl].runsConceded += d.runs;
+            if (batRuns === 4) batters[bat].fours += 1;
+            if (batRuns === 6) batters[bat].sixes += 1;
+         } else if (['B', 'LB'].includes(d.type)) {
+            // Byes and Leg Byes do not count towards bowler's runs or batter's runs
+            // Actually, in standard cricket, they don't count for bowler.
+         } else {
+            batters[bat].runs += d.runs;
+            bowlers[bowl].runsConceded += d.runs;
+            if (d.runs === 4) batters[bat].fours += 1;
+            if (d.runs === 6) batters[bat].sixes += 1;
+         }
       }
       
       if (d.isWicket) {

@@ -1,13 +1,31 @@
 import React from 'react';
 
 export const CricketScoreboardThemes = ({
-  theme, runs, wickets, overs, balls, target, 
+  theme, runs, wickets, overs, balls, target, innings, inningsScores,
   striker, strikerStats, nonStriker, nonStrikerStats, 
   bowler, bowlerStats, thisOver, teamA, teamB, onPlayerClick
 }: any) => {
   const crr = (runs / Math.max(1, overs + balls/6)).toFixed(1);
   const teamALogo = localStorage.getItem('match_team_a_logo') || `https://ui-avatars.com/api/?name=${teamA}&background=0D8ABC&color=fff&rounded=true&bold=true`;
   const teamBLogo = localStorage.getItem('match_team_b_logo') || `https://ui-avatars.com/api/?name=${teamB}&background=d11a2a&color=fff&rounded=true&bold=true`;
+
+  let displayTarget = target ? `T: ${target}` : null;
+  if (!target && innings > 1 && inningsScores?.length > 0) {
+    if (innings === 2) {
+      const diff = runs - (inningsScores[0]?.runs || 0);
+      displayTarget = diff > 0 ? `Lead by ${diff}` : `Trail by ${Math.abs(diff)}`;
+    } else if (innings === 3) {
+      const diff = ((inningsScores[1]?.runs || 0) + runs) - (inningsScores[0]?.runs || 0);
+      displayTarget = diff > 0 ? `Lead by ${diff}` : `Trail by ${Math.abs(diff)}`;
+    } else if (innings === 4) {
+      const diff = ((inningsScores[0]?.runs || 0) + runs) - (inningsScores[1]?.runs || 0);
+      displayTarget = diff > 0 ? `Lead by ${diff}` : `Trail by ${Math.abs(diff)}`;
+    }
+  }
+
+  const displayTargetLabel = displayTarget?.startsWith('T: ') ? 'Target' : 'Info';
+  const displayTargetLabelShort = displayTarget?.startsWith('T: ') ? 'TGT' : 'INFO';
+  const displayTargetValue = displayTarget?.startsWith('T: ') ? displayTarget.replace('T: ', '') : displayTarget;
 
   const renderPlayer = (name: string, stats: any, isBowler: boolean = false, className: string = "") => {
     return (
@@ -36,10 +54,10 @@ export const CricketScoreboardThemes = ({
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Overs</span>
             <span className="font-bold text-lg leading-none">{overs}.{balls}</span>
           </div>
-          {target && (
+          {displayTarget && (
             <div className="flex flex-col justify-center px-4 py-1 bg-[#0a192f] border-l border-white/10">
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target</span>
-              <span className="font-bold text-lg leading-none">{target}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{displayTargetLabel}</span>
+              <span className="font-bold text-lg leading-none">{displayTargetValue}</span>
             </div>
           )}
           <div className="flex items-center px-6 py-1 bg-[#0a192f] border-l border-white/10 flex-1 justify-end space-x-6 hidden md:flex">
@@ -77,10 +95,10 @@ export const CricketScoreboardThemes = ({
             <span className="text-2xl font-black text-white">{runs}/{wickets}</span>
             <span className="text-sm text-slate-300 ml-2">({overs}.{balls})</span>
           </div>
-          {target && (
+          {displayTarget && (
             <div className="flex items-center border-l border-white/20 pl-6">
-              <span className="text-xs text-slate-400 mr-2">TGT</span>
-              <span className="font-bold">{target}</span>
+              <span className="text-xs text-slate-400 mr-2">{displayTargetLabelShort}</span>
+              <span className="font-bold">{displayTargetValue}</span>
             </div>
           )}
           <div className="flex items-center border-l border-white/20 pl-3 sm:pl-6 space-x-2 sm:space-x-4">
@@ -116,10 +134,10 @@ export const CricketScoreboardThemes = ({
             <span className="text-[10px] uppercase font-black text-[#e94560] tracking-widest">Overs</span>
             <span className="font-black text-xl leading-none tracking-wider">{overs}.{balls}</span>
           </div>
-          {target && (
+          {displayTarget && (
             <div className="flex flex-col justify-center px-4 py-2 relative z-10 border-l border-white/10">
-              <span className="text-[10px] uppercase font-black text-amber-400 tracking-widest">Target</span>
-              <span className="font-black text-xl leading-none">{target}</span>
+              <span className="text-[10px] uppercase font-black text-amber-400 tracking-widest">{displayTargetLabel}</span>
+              <span className="font-black text-xl leading-none">{displayTargetValue}</span>
             </div>
           )}
           <div className="flex items-center px-3 sm:px-6 py-2 relative z-10 border-l border-white/10 flex-1 justify-end space-x-2 sm:space-x-6">
@@ -169,10 +187,10 @@ export const CricketScoreboardThemes = ({
             <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Overs</div>
             <div className="font-bold">{overs}.{balls}</div>
           </div>
-          {target && (
+          {displayTarget && (
             <div className="hidden sm:block pl-4 border-l border-slate-700">
-              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target</div>
-              <div className="font-bold text-yellow-400">{target}</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{displayTargetLabel}</div>
+              <div className="font-bold text-yellow-400">{displayTargetValue}</div>
             </div>
           )}
         </div>

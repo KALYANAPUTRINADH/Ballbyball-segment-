@@ -9,8 +9,8 @@ export function MatchTimeline({ inningsScores = [], currentDeliveries = [], team
   // Create a unified list of innings data
   const allInnings = [...inningsScores];
   
-  // Add current innings if there are deliveries or runs
-  if (currentDeliveries.length > 0 || runs > 0) {
+  // Include current active innings so live score updates in parallel with scorer panel
+  if (allInnings.length === inningsScores.length) {
     allInnings.push({
       innings: inningsScores.length + 1,
       runs,
