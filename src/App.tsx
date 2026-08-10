@@ -37,6 +37,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DeleteAccountPolicy from "./pages/DeleteAccountPolicy";
 import RefundPolicy from "./pages/RefundPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import AboutUs from "./pages/AboutUs";
+import HelpCenter from "./pages/HelpCenter";
 import { Logo } from "./components/Logo";
 import { AdSenseLoader } from "./components/AdSenseLoader";
 
@@ -71,6 +73,12 @@ export default function App() {
   }
   if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('page') === 'delete-account') {
     return <DeleteAccountPolicy />;
+  }
+  if (typeof window !== 'undefined' && (new URLSearchParams(window.location.search).get('page') === 'about' || new URLSearchParams(window.location.search).get('page') === 'about-us')) {
+    return <AboutUs />;
+  }
+  if (typeof window !== 'undefined' && ['help', 'faq', 'helpcenter', 'help-center', 'help-center-faq'].includes(new URLSearchParams(window.location.search).get('page') || '')) {
+    return <HelpCenter />;
   }
   
   const [showProModal, setShowProModal] = useState<string | null>(null);
@@ -263,6 +271,10 @@ export default function App() {
     );
   }
 
+  if (fullScreenView === "Help Center & FAQ" || fullScreenView === "Help Center") {
+    return <HelpCenter setFullScreenView={handleSetFullScreenView} />;
+  }
+
   if (
     [
       "My Performance",
@@ -284,6 +296,7 @@ export default function App() {
       "Admin Panel",
       "Streaming Setup",
       "OBS Live Stream",
+      "About Us",
     ].includes(fullScreenView || "")
   ) {
     return (
@@ -333,6 +346,7 @@ export default function App() {
               {fullScreenView === "OBS Live Stream" && (
                 <OBSLiveStream setFullScreenView={handleSetFullScreenView} />
               )}
+              {fullScreenView === "About Us" && <AboutUs />}
             </div>
           </div>
           <ProUpgradeModal

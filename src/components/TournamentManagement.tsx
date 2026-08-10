@@ -748,43 +748,51 @@ export function TournamentManagement({ onBack, tournament, tournamentName = "Win
                 "Tournament Standings"
               )
             ) : (
-              <>
-                <h3 className="font-bold text-slate-900 text-sm">Group A - Points Table</h3>
-                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                  <div className="grid grid-cols-12 gap-1 p-3 bg-slate-100 text-xs font-bold text-slate-600 border-b border-slate-200 text-center">
-                    <div className="col-span-5 text-left pl-2">Team</div>
-                    <div className="col-span-1">M</div>
-                    <div className="col-span-1">W</div>
-                    {(!tournament?.sport_type || tournament?.sport_type === 'Football') && <div className="col-span-1">D</div>}
-                    <div className="col-span-1">L</div>
-                    <div className="col-span-2">
-                      {(!tournament?.sport_type || tournament?.sport_type === 'Cricket') ? 'NRR' : 
-                       (tournament?.sport_type === 'Football') ? 'GD' : 
-                       (tournament?.sport_type === 'Basketball') ? 'PD' : 'SD'}
+              (() => {
+                const teams = tournament?.teamNames ? tournament.teamNames.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+                if (teams.length === 0) {
+                  return (
+                    <div className="bg-white p-8 rounded-xl border border-slate-200 border-dashed text-center">
+                      <p className="text-slate-500 text-sm font-medium">No teams registered yet.</p>
+                      <p className="text-slate-400 text-xs mt-1">Add teams in the Teams tab to generate the points table.</p>
                     </div>
-                    <div className="col-span-2 text-[#d11a2a]">Pts</div>
-                  </div>
-                  {[
-                    { name: 'Royal Warriors', m: 5, w: 4, d: 0, l: 1, diff: '+1.250', pts: 8 },
-                    { name: 'Cypher XI', m: 5, w: 3, d: 0, l: 2, diff: '+0.850', pts: 6 },
-                    { name: 'Amigos', m: 5, w: 3, d: 0, l: 2, diff: '-0.150', pts: 6 },
-                    { name: 'Five Stars', m: 5, w: 0, d: 0, l: 5, diff: '-2.100', pts: 0 }
-                  ].map((team, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-1 p-3 border-b border-slate-100 text-xs text-center items-center hover:bg-slate-50 transition-colors">
-                      <div className="col-span-5 text-left pl-2 font-bold text-slate-900 flex items-center space-x-2">
-                        <span className="text-slate-400 w-3">{idx + 1}</span>
-                        <span className="truncate">{team.name}</span>
+                  );
+                }
+                return (
+                  <>
+                    <h3 className="font-bold text-slate-900 text-sm">Group Stage - Points Table</h3>
+                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                      <div className="grid grid-cols-12 gap-1 p-3 bg-slate-100 text-xs font-bold text-slate-600 border-b border-slate-200 text-center">
+                        <div className="col-span-5 text-left pl-2">Team</div>
+                        <div className="col-span-1">M</div>
+                        <div className="col-span-1">W</div>
+                        {(!tournament?.sport_type || tournament?.sport_type === 'Football') && <div className="col-span-1">D</div>}
+                        <div className="col-span-1">L</div>
+                        <div className="col-span-2">
+                          {(!tournament?.sport_type || tournament?.sport_type === 'Cricket') ? 'NRR' : 
+                           (tournament?.sport_type === 'Football') ? 'GD' : 
+                           (tournament?.sport_type === 'Basketball') ? 'PD' : 'SD'}
+                        </div>
+                        <div className="col-span-2 text-[#d11a2a]">Pts</div>
                       </div>
-                      <div className="col-span-1 text-slate-600">{team.m}</div>
-                      <div className="col-span-1 text-emerald-600 font-medium">{team.w}</div>
-                      {(!tournament?.sport_type || tournament?.sport_type === 'Football') && <div className="col-span-1 text-slate-500 font-medium">{team.d}</div>}
-                      <div className="col-span-1 text-red-600 font-medium">{team.l}</div>
-                      <div className="col-span-2 text-slate-600">{team.diff}</div>
-                      <div className="col-span-2 font-bold text-slate-900">{team.pts}</div>
+                      {teams.map((tName: string, idx: number) => (
+                        <div key={idx} className="grid grid-cols-12 gap-1 p-3 border-b border-slate-100 text-xs text-center items-center hover:bg-slate-50 transition-colors">
+                          <div className="col-span-5 text-left pl-2 font-bold text-slate-900 flex items-center space-x-2">
+                            <span className="text-slate-400 w-3">{idx + 1}</span>
+                            <span className="truncate">{tName}</span>
+                          </div>
+                          <div className="col-span-1 text-slate-600">0</div>
+                          <div className="col-span-1 text-emerald-600 font-medium">0</div>
+                          {(!tournament?.sport_type || tournament?.sport_type === 'Football') && <div className="col-span-1 text-slate-500 font-medium">0</div>}
+                          <div className="col-span-1 text-red-600 font-medium">0</div>
+                          <div className="col-span-2 text-slate-600">0.000</div>
+                          <div className="col-span-2 font-bold text-slate-900">0</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </>
+                  </>
+                );
+              })()
             )}
           </div>
         )}
@@ -936,45 +944,64 @@ export function TournamentManagement({ onBack, tournament, tournamentName = "Win
           <div className="flex flex-col items-center justify-center space-y-6 pt-4">
             <h3 className="font-bold text-slate-900 text-sm self-start mb-2">Knockout Stage</h3>
             
-            <div className="flex items-center space-x-4 w-full max-w-lg">
-              {/* Semi Finals */}
-              <div className="flex flex-col space-y-8 w-1/2">
-                <div className="bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative">
-                  <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
-                    <span>Royal Warriors</span><span className="text-slate-500">185/6</span>
+            {(() => {
+              const teams = tournament?.teamNames ? tournament.teamNames.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+              if (teams.length < 2) {
+                return (
+                  <div className="bg-white p-8 rounded-xl border border-slate-200 border-dashed text-center w-full">
+                    <p className="text-slate-500 text-sm font-medium">Insufficient teams for knockout brackets.</p>
+                    <p className="text-slate-400 text-xs mt-1">Register at least 2 teams to configure tournament brackets.</p>
                   </div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>Amigos</span><span className="text-slate-500">140/10</span>
-                  </div>
-                  <div className="absolute right-0 top-1/2 w-4 border-t border-slate-300 translate-x-full"></div>
-                  <div className="absolute right-4 top-1/2 h-16 border-r border-slate-300 translate-x-full"></div>
-                </div>
+                );
+              }
 
-                <div className="bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative">
-                  <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
-                    <span>Cypher XI</span><span className="text-slate-500">160/4</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500">
-                    <span>Storm Raiders</span><span className="text-slate-500">158/8</span>
-                  </div>
-                  <div className="absolute right-0 top-1/2 w-4 border-t border-slate-300 translate-x-full"></div>
-                </div>
-              </div>
+              const t1 = teams[0] || 'Team 1';
+              const t2 = teams[1] || 'Team 2';
+              const t3 = teams[2] || 'TBD';
+              const t4 = teams[3] || 'TBD';
 
-              {/* Finals */}
-              <div className="flex flex-col justify-center w-1/2 relative">
-                 <div className="absolute left-0 top-1/2 w-4 border-t border-slate-300 -translate-x-full"></div>
-                 <div className="bg-white border-2 border-[#d11a2a] rounded-lg p-2 shadow-md">
-                  <div className="text-[10px] font-bold text-[#d11a2a] text-center mb-1 uppercase tracking-wider">Final</div>
-                  <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
-                    <span>Royal Warriors</span><span className="text-slate-500">-</span>
+              return (
+                <div className="flex items-center space-x-4 w-full max-w-lg">
+                  {/* Semi Finals */}
+                  <div className="flex flex-col space-y-8 w-1/2">
+                    <div className="bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative">
+                      <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
+                        <span>{t1}</span><span className="text-slate-400">-</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>{t3}</span><span className="text-slate-400">-</span>
+                      </div>
+                      <div className="absolute right-0 top-1/2 w-4 border-t border-slate-300 translate-x-full"></div>
+                      <div className="absolute right-4 top-1/2 h-16 border-r border-slate-300 translate-x-full"></div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative">
+                      <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
+                        <span>{t2}</span><span className="text-slate-400">-</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>{t4}</span><span className="text-slate-400">-</span>
+                      </div>
+                      <div className="absolute right-0 top-1/2 w-4 border-t border-slate-300 translate-x-full"></div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs font-bold text-slate-900">
-                    <span>Cypher XI</span><span className="text-slate-500">-</span>
+
+                  {/* Finals */}
+                  <div className="flex flex-col justify-center w-1/2 relative">
+                    <div className="absolute left-0 top-1/2 w-4 border-t border-slate-300 -translate-x-full"></div>
+                    <div className="bg-white border-2 border-[#d11a2a] rounded-lg p-2 shadow-md">
+                      <div className="text-[10px] font-bold text-[#d11a2a] text-center mb-1 uppercase tracking-wider">Final</div>
+                      <div className="flex justify-between text-xs font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
+                        <span>Winner SF1</span><span className="text-slate-400">-</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-900">
+                        <span>Winner SF2</span><span className="text-slate-400">-</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         )}
 

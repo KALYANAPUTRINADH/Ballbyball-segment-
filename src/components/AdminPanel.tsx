@@ -80,55 +80,7 @@ export const AdminPanel: React.FC = () => {
   const [editingSegment, setEditingSegment] = useState<any | null>(null);
 
   // Seed Constants
-  const SEED_TOURNAMENTS = [
-    {
-      id: 101,
-      name: "Premier T20 Cup",
-      location: "Mumbai Oval",
-      date: "2026-07-20",
-      status: "Upcoming",
-      teamsCount: 8,
-      sport_type: "Cricket",
-      format: "League",
-      ball_type: "Leather",
-      entryFee: 1500
-    },
-    {
-      id: 102,
-      name: "State Championship",
-      location: "Delhi Stadium",
-      date: "2026-08-15",
-      status: "Ongoing",
-      teamsCount: 16,
-      sport_type: "Cricket",
-      format: "Knockout",
-      ball_type: "Tennis",
-      entryFee: 2500
-    },
-    {
-      id: 103,
-      name: "Super League Tournament",
-      location: "Kolkata Arena",
-      date: "2026-07-25",
-      status: "Ongoing",
-      teamsCount: 10,
-      sport_type: "Football",
-      format: "League",
-      entryFee: 2000
-    },
-    {
-      id: 104,
-      name: "Grass Court Grand Open",
-      location: "London Courts",
-      date: "2026-06-18",
-      status: "Completed",
-      teamsCount: 32,
-      sport_type: "Tennis",
-      format: "Knockout",
-      entryFee: 5000
-    }
-  ];
-
+  const SEED_TOURNAMENTS: any[] = [];
   const SEED_MATCHES: any[] = [];
   
   // Status message

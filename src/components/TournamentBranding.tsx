@@ -172,11 +172,11 @@ export function TournamentBranding() {
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm mb-3">
                 <div className="text-[10px] text-slate-500 mb-2">LIVE • Final</div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold">Royal Warriors</span>
+                  <span className="text-sm font-bold">Team A</span>
                   <span className="text-sm font-bold">185/4</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-500">Super Strikers</span>
+                  <span className="text-sm font-bold text-slate-500">Team B</span>
                   <span className="text-sm font-bold text-slate-500">Yet to bat</span>
                 </div>
               </div>
@@ -184,10 +184,10 @@ export function TournamentBranding() {
               <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                 <div className="text-[10px] text-slate-500 mb-2">Upcoming • Semi-Final</div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold">Mumbai Indians</span>
+                  <span className="text-sm font-bold">Team C</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold">Chennai Super Kings</span>
+                  <span className="text-sm font-bold">Team D</span>
                 </div>
               </div>
             </div>

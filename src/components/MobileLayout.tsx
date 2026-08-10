@@ -349,7 +349,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                 <div className="absolute top-0 right-0 bg-amber-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">BEST VALUE</div>
                 <div>
                   <h3 className={`font-bold text-lg ${selectedPlan === 'yearly' ? 'text-amber-300' : 'text-white'}`}>Yearly Plan</h3>
-                  <p className="text-sm text-amber-100/70">₹999 / year <span className="line-through text-slate-400 ml-2">₹1188</span></p>
+                  <p className="text-sm text-amber-100/70">₹999 / year <span className="line-through text-slate-400 ml-2">₹1,188</span></p>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'yearly' ? 'border-amber-400 bg-amber-400' : 'border-slate-400 group-hover:border-amber-400'}`}>
                   {selectedPlan === 'yearly' && <Check className="w-4 h-4 text-yellow-900" />}
@@ -490,6 +490,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                 <div className="bg-white border-y border-gray-100">
                   {[
                     ...(isAdmin ? [{ icon: '🛠️', label: 'Admin Panel', badge: 'System' }] : []),
+                    { icon: 'ℹ️', label: 'About Us' },
+                    { icon: '❓', label: 'Help Center & FAQ' },
                     { icon: '🏆', label: 'Add a Tournament/Series', badge: 'Pro (₹99/m)' },
                     { icon: '🏏', label: 'Start A Match', badge: 'Free' },
                     { icon: '✂️', label: 'Video Segmentation' },
@@ -516,7 +518,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                         <span className="text-[15px] text-gray-800 font-medium">{item.label}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {item.badge === "Pro (₹99/m)" ? <ProBadge /> : item.badge && (
+                        {item.badge?.startsWith("Pro") ? <ProBadge /> : item.badge && (
                           <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">{item.badge}</span>
                         )}
 

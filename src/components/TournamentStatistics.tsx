@@ -62,40 +62,6 @@ export function TournamentStatistics({ tournamentId, sportType = 'Cricket', tour
     return () => unsubscribe();
   }, [tournamentId]);
 
-  // Seed default stats if database is empty for this tournament
-  const handleSeedDemoStats = async () => {
-    try {
-      setSaving(true);
-      const teams = suggestedTeams.length > 0 ? suggestedTeams : ['Royal Warriors', 'Cypher XI', 'Amigos', 'Five Stars'];
-      
-      const demoPlayers = sportType === 'Cricket' ? [
-        { playerName: 'Aakash Sharma', teamName: teams[0] || 'Royal Warriors', runs: 342, wickets: 2, catches: 8, mvpPoints: 120, isEmerging: false, customAward: 'Orange Cap Candidate' },
-        { playerName: 'Vikram Malhotra', teamName: teams[1] || 'Cypher XI', runs: 298, wickets: 14, catches: 5, mvpPoints: 145, isEmerging: false, customAward: 'Most Sixes' },
-        { playerName: 'Rohan Deshmukh', teamName: teams[2] || 'Amigos', runs: 180, wickets: 18, catches: 11, mvpPoints: 130, isEmerging: true, customAward: 'Super Fielder' },
-        { playerName: 'Kunal Sen', teamName: teams[1] || 'Cypher XI', runs: 412, wickets: 0, catches: 4, mvpPoints: 155, isEmerging: false, customAward: 'Leading Run Scorer' },
-        { playerName: 'Aditya Roy', teamName: teams[2] || 'Amigos', runs: 94, wickets: 22, catches: 6, mvpPoints: 160, isEmerging: true, customAward: 'Purple Cap Candidate' },
-        { playerName: 'Sanjay Dutt', teamName: teams[0] || 'Royal Warriors', runs: 215, wickets: 11, catches: 9, mvpPoints: 115, isEmerging: false, customAward: 'Electric Catch of Tournament' }
-      ] : [
-        { playerName: 'Marcus Sterling', teamName: teams[0] || 'Royal Warriors', goals: 12, assists: 4, points: 120, catches: 14, mvpPoints: 140, isEmerging: false, customAward: 'Golden Boot Candidate' },
-        { playerName: 'Leonardo Cruz', teamName: teams[1] || 'Cypher XI', goals: 7, assists: 11, points: 150, catches: 6, mvpPoints: 155, isEmerging: false, customAward: 'Golden Assist' },
-        { playerName: 'Dimitri Ivanov', teamName: teams[2] || 'Amigos', goals: 2, assists: 3, points: 80, catches: 45, mvpPoints: 110, isEmerging: true, customAward: 'Golden Glove (Goalkeeper)' },
-        { playerName: 'Sven Lindqvist', teamName: teams[3] || 'Five Stars', goals: 9, assists: 2, points: 95, catches: 28, mvpPoints: 115, isEmerging: true, customAward: 'Breakout Youngster' }
-      ];
-
-      for (const player of demoPlayers) {
-        await dbService.create('player_stats', {
-          ...player,
-          tournamentId,
-          sportType
-        });
-      }
-    } catch (e) {
-      console.error('Failed to seed demo stats', e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // Submit / Save Stat Form
   const handleSaveStat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,21 +223,13 @@ export function TournamentStatistics({ tournamentId, sportType = 'Cricket', tour
           </p>
           <div className="flex space-x-3">
             <button
-              onClick={handleSeedDemoStats}
-              disabled={saving}
-              className="bg-[#d11a2a] hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-lg flex items-center space-x-1.5 transition shadow"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{saving ? 'Seeding...' : 'Seed Beautiful Sample Stats'}</span>
-            </button>
-            <button
               onClick={() => {
                 setShowForm(true);
                 setActiveSubTab('manage');
               }}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-lg transition"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition"
             >
-              Add Custom Player
+              Add Player Statistics
             </button>
           </div>
         </div>
@@ -830,7 +788,7 @@ export function TournamentStatistics({ tournamentId, sportType = 'Cricket', tour
               </div>
             ) : (
               <div className="p-8 text-center text-xs text-slate-400 italic">
-                No statistics stored in the database. Use 'Seed Beautiful Sample Stats' to prepopulate instantly.
+                No statistics stored in the database. Add player stats to view them here.
               </div>
             )}
           </div>

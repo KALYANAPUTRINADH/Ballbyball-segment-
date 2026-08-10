@@ -74,7 +74,7 @@ export function SubscriptionManagement() {
     },
     {
       question: "How do the ₹99/month and ₹999/year plans compare?",
-      answer: "Both plans grant full, unrestricted access to all Pro features. The Monthly plan (₹99/mo) offers maximum flexibility, while the Yearly plan (₹999/yr) saves you over 30% annually (equal to roughly ₹83/mo) and guarantees non-stop access for the entire year."
+      answer: "Both plans grant full, unrestricted access to all Pro features. The Monthly plan (₹99/mo) offers maximum flexibility, while the Yearly plan (₹999/yr) saves you over 15% annually (equal to roughly ₹83/mo) and guarantees non-stop access for the entire year."
     },
     {
       question: "Can I upgrade, downgrade, or cancel at any time?",

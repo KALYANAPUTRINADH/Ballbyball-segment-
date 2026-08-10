@@ -339,27 +339,6 @@ export function NotificationCenter({ setFullScreenView }: NotificationCenterProp
                 })
               )}
             </div>
-
-            {/* Developer Live Action Simulator (Demo Assistant) */}
-            <div className="border-t border-slate-200 bg-slate-50 p-3">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1">
-                Demo Action Simulator
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleSimulateSubscriptionRenewal}
-                  className="px-2 py-1.5 bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-200 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1"
-                >
-                  <Calendar className="w-3 h-3 text-amber-500" /> Expiry Alert
-                </button>
-                <button
-                  onClick={handleSimulateAnalyticsReady}
-                  className="px-2 py-1.5 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 border border-slate-200 hover:border-indigo-200 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1"
-                >
-                  <TrendingUp className="w-3 h-3 text-indigo-500" /> Analytics Alert
-                </button>
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

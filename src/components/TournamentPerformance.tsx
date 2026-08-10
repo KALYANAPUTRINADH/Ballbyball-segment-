@@ -52,26 +52,19 @@ export function TournamentPerformance({ tournamentId, sportType = 'Cricket' }: T
       if (teams.length > 0) {
         processedTeams = teams.map((t: any) => ({
           name: t.name || 'Unnamed Team',
-          batting: Math.floor(Math.random() * 30) + 70,
-          bowling: Math.floor(Math.random() * 30) + 70,
-          fielding: Math.floor(Math.random() * 30) + 70,
-          depth: Math.floor(Math.random() * 40) + 60,
-          consistency: Math.floor(Math.random() * 30) + 70,
+          batting: t.batting || 0,
+          bowling: t.bowling || 0,
+          fielding: t.fielding || 0,
+          depth: t.depth || 0,
+          consistency: t.consistency || 0,
         }));
-      } else {
-        processedTeams = [
-          { name: 'Royal Warriors', batting: 88, bowling: 84, fielding: 90, depth: 75, consistency: 85 },
-          { name: 'Cypher XI', batting: 92, bowling: 78, fielding: 82, depth: 88, consistency: 80 },
-          { name: 'Amigos', batting: 79, bowling: 89, fielding: 85, depth: 70, consistency: 84 },
-          { name: 'Five Stars', batting: 70, bowling: 72, fielding: 78, depth: 65, consistency: 68 },
-        ];
       }
       setTeamMatrixData(processedTeams);
 
-      const t1Name = processedTeams[0]?.name || 'Royal Warriors';
-      const t2Name = processedTeams[1]?.name || 'Cypher XI';
-      const t3Name = processedTeams[2]?.name || 'Amigos';
-      const t4Name = processedTeams[3]?.name || 'Five Stars';
+      const t1Name = processedTeams[0]?.name || 'Team 1';
+      const t2Name = processedTeams[1]?.name || 'Team 2';
+      const t3Name = processedTeams[2]?.name || 'Team 3';
+      const t4Name = processedTeams[3]?.name || 'Team 4';
 
       // Process Scoring Velocity Over Stages dynamically mapping team names to keep chart keys aligned
       if (sportType === 'Cricket') {

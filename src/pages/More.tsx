@@ -26,6 +26,12 @@ export default function More({ setFullScreenView }: { setFullScreenView?: (view:
       if (setFullScreenView) setFullScreenView("Streaming Setup");
     } else if (label === "OBS Live Stream") {
       if (setFullScreenView) setFullScreenView("OBS Live Stream");
+    } else if (label === "About Us") {
+      if (setFullScreenView) setFullScreenView("About Us");
+      else window.location.href = "?page=about";
+    } else if (label === "Help Center & FAQ" || label === "Help Center") {
+      if (setFullScreenView) setFullScreenView("Help Center & FAQ");
+      else window.location.href = "?page=help";
     } else if (label === "Payment & Refund Policy") {
       window.location.href = "?page=refund-policy";
     } else if (label === "Terms of Service") {
@@ -59,6 +65,7 @@ export default function More({ setFullScreenView }: { setFullScreenView?: (view:
     {
       title: "Support & Legal",
       items: [
+        { icon: <HelpCircle className="w-5 h-5 text-red-500" />, label: "About Us" },
         { icon: <BookOpen className="w-5 h-5 text-slate-500" />, label: "Rules Handbook" },
         { icon: <HelpCircle className="w-5 h-5 text-slate-500" />, label: "Help Center & FAQ" },
         { icon: <FileText className="w-5 h-5 text-slate-500" />, label: "Terms of Service" },
