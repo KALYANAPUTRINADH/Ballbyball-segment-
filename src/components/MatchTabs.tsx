@@ -34,9 +34,9 @@ import { FileText, Download, Share2, ClipboardList } from 'lucide-react';
 
 export function MatchTabs(props: MatchTabsProps) {
   const [activeTab, setActiveTab] = useState('Scorecard');
-  const allTabs = ['Scorecard', 'Timeline', 'Summary', 'Commentary', 'Squads', 'Highlights', 'Analytics', 'Reports', 'Info'];
+  const allTabs = ['Scorecard', 'Timeline', 'Summary', 'Commentary', 'Squads', 'Analytics', 'Reports', 'Info'];
   const tabs = props.sportType && props.sportType !== 'Cricket' 
-    ? ['Scorecard', 'Squads', 'Highlights', 'Analytics', 'Info'] 
+    ? ['Scorecard', 'Squads', 'Analytics', 'Info'] 
     : allTabs;
   
   const teamA = props.teamA || (typeof window !== 'undefined' ? localStorage.getItem('match_team_a') || 'Mumbai Indians' : 'Mumbai Indians');
@@ -109,17 +109,7 @@ export function MatchTabs(props: MatchTabsProps) {
           />
         )}
 
-      {activeTab === 'Highlights' && (
-        <div className="p-4 text-center py-10">
-          <div className="inline-block p-4 rounded-full bg-slate-100 mb-4">
-            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h3 className="font-bold text-slate-800 mb-1">Match Highlights</h3>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto">AI-generated highlights will be available shortly after the match concludes.</p>
-        </div>
-      )}
+
 
       </div>
     </div>

@@ -388,37 +388,51 @@ app.post('/api/notifications/whatsapp', requireAuth, async (req: AuthRequest, re
 });
 
 // Stripe Integration
-app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) => {
-  const { amount, description } = req.body;
+const createStripeCheckoutSession = async (req: any, res: any) => {
+  const { amount = 2.99, description = 'Streamlify Pro Subscription', currency = 'usd' } = req.body || {};
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      const origin = req.headers.origin || 'http://localhost:3000';
+      return res.json({
+        id: 'cs_demo_' + Date.now(),
+        url: `${origin}/?payment=success&provider=stripe&amount=${amount}`,
+        simulated: true,
+        message: 'STRIPE_SECRET_KEY is not configured on server. Generated simulated checkout URL.'
+      });
+    }
+
     const stripe = getStripe();
+    const curr = (currency || 'usd').toLowerCase();
+    const unitAmount = Math.round((Number(amount) || 2.99) * 100);
+
+    const origin = req.headers.origin || 'http://localhost:3000';
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'inr',
+            currency: curr,
             product_data: {
-              name: description || 'Premium Subscription',
+              name: description || 'Streamlify Pro Subscription',
             },
-            unit_amount: (amount || 49) * 100,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${req.headers.origin}/success`,
-      cancel_url: `${req.headers.origin}/cancel`,
+      success_url: `${origin}/success?payment=success&provider=stripe&amount=${amount}`,
+      cancel_url: `${origin}/?payment=cancel`,
     });
     res.json({ id: session.id, url: session.url });
   } catch (error: any) {
-    if (String(error.message || error).includes('fetch failed') || String(error.message || error).includes('FetchError')) {
-      res.status(503).json({ error: 'Database connection failed' });
-    } else {
-      res.status(500).json({ error: error.message });
-    }
+    console.error('Stripe Checkout Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create Stripe checkout session' });
   }
-});
+};
+
+app.post('/api/stripe/create-checkout-session', requireAuth, createStripeCheckoutSession);
+app.post('/api/payments/stripe/create-checkout-session', requireAuth, createStripeCheckoutSession);
 
 // Razorpay Integration
 app.post('/api/payments/razorpay/create-order', requireAuth, async (req, res) => {

@@ -294,12 +294,9 @@ export function AIAnalytics() {
             </div>
           </div>
           <div className="space-y-3">
-            <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
-              <h4 className="text-sm font-semibold text-rose-900 flex items-center mb-1">
-                <FastForward className="w-4 h-4 mr-1 text-rose-500" /> Auto-Generated Highlights
-              </h4>
-              <p className="text-xs text-rose-700">
-                Our AI detected 3 key moments in this match segment, including a crucial boundary and a dropped catch.
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="text-xs text-slate-600">
+                Live computer vision camera tracking is analyzing player movements and ball trajectory.
               </p>
             </div>
           </div>

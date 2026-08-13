@@ -54,7 +54,7 @@ export const AdminPanel: React.FC = () => {
   const [editingStats, setEditingStats] = useState<any | null>(null);
   const [statsSport, setStatsSport] = useState<string>('Cricket');
   const [newTransactionUser, setNewTransactionUser] = useState<string>('');
-  const [newTransactionAmount, setNewTransactionAmount] = useState<number>(99);
+  const [newTransactionAmount, setNewTransactionAmount] = useState<number>(2.99);
   const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
 
   // Tournaments & Segments States

@@ -33,7 +33,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
   const handleStripeCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 99 : 999;
+      const amount = selectedPlan === 'monthly' ? 2.99 : 29.99;
       const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
 
       const res = await fetch('/api/stripe/create-checkout-session', {
@@ -44,32 +44,13 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
         },
         body: JSON.stringify({
           amount,
+          currency: 'usd',
           description
         })
       });
       const data = await res.json();
       if (data.url) {
-        try {
-          
-              const expiryDate = new Date();
-              if (selectedPlan === 'yearly') {
-                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-              } else {
-                expiryDate.setMonth(expiryDate.getMonth() + 1);
-              }
-              await dbService.update('profiles', user.uid, { is_pro: true, subscription_status: 'active', pro_expiration_date: expiryDate.toISOString() });
-    await dbService.create('transactions', {
-      user_id: user.uid,
-      amount: amount,
-      currency: 'INR',
-      status: 'completed',
-      description: description,
-      created_at: new Date().toISOString()
-    });
-  
-          alert('Stripe Payment simulated successfully! You are now a PRO member.');
-          window.location.reload();
-        } catch(e) {}
+        window.location.href = data.url;
       } else {
         alert("Failed to initialize Stripe checkout");
       }
@@ -84,7 +65,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
   const handleRazorpayCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 99 : 999;
+      const amount = selectedPlan === 'monthly' ? 249 : 2499;
       const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
       
       const configRes = await fetch('/api/config');
@@ -338,7 +319,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
               <div onClick={() => setSelectedPlan('monthly')} className={`rounded-xl p-4 border flex items-center justify-between cursor-pointer transition-colors group ${selectedPlan === 'monthly' ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border-amber-400/50' : 'bg-white/10 border-white/20 hover:bg-white/20'}`}>
                 <div>
                   <h3 className={`font-bold text-lg ${selectedPlan === 'monthly' ? 'text-amber-300' : 'text-white'}`}>Monthly Plan</h3>
-                  <p className="text-sm text-slate-300">₹99 / month</p>
+                  <p className="text-sm text-slate-300">$2.99 / month <span className="text-xs text-slate-400 ml-1">(~₹249)</span></p>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'monthly' ? 'border-amber-400 bg-amber-400' : 'border-slate-400 group-hover:border-amber-400'}`}>
                   {selectedPlan === 'monthly' && <Check className="w-4 h-4 text-yellow-900" />}
@@ -349,7 +330,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                 <div className="absolute top-0 right-0 bg-amber-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">BEST VALUE</div>
                 <div>
                   <h3 className={`font-bold text-lg ${selectedPlan === 'yearly' ? 'text-amber-300' : 'text-white'}`}>Yearly Plan</h3>
-                  <p className="text-sm text-amber-100/70">₹999 / year <span className="line-through text-slate-400 ml-2">₹1,188</span></p>
+                  <p className="text-sm text-amber-100/70">$29.99 / year <span className="line-through text-slate-400 ml-2">$35.88</span></p>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'yearly' ? 'border-amber-400 bg-amber-400' : 'border-slate-400 group-hover:border-amber-400'}`}>
                   {selectedPlan === 'yearly' && <Check className="w-4 h-4 text-yellow-900" />}
@@ -359,18 +340,18 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
             
             <div className="p-6 pt-2 space-y-3">
               <button 
-                onClick={handleRazorpayCheckout}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-yellow-900 font-bold py-3.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 text-lg"
-              >
-                {loading ? 'Processing...' : `Pay ₹${selectedPlan === 'monthly' ? '99' : '999'} with Razorpay`}
-              </button>
-              <button 
                 onClick={handleStripeCheckout}
                 disabled={loading}
-                className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2 rounded-xl border border-white/20 transition-all active:scale-95 text-sm"
+                className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-yellow-900 font-bold py-3.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 text-base"
               >
-                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹99' : '₹999'} with Stripe`}
+                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '$2.99' : '$29.99'} with Stripe`}
+              </button>
+              <button 
+                onClick={handleRazorpayCheckout}
+                disabled={loading}
+                className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2 rounded-xl border border-white/20 transition-all active:scale-95 text-xs"
+              >
+                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹249' : '₹2,499'} with Razorpay`}
               </button>
             </div>
           </div>
@@ -479,7 +460,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3 text-gray-800">
                           <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded shadow-sm">PRO</span>
-                          <span className="font-bold text-sm">PRO at ₹99/mo, ₹999/yr</span>
+                          <span className="font-bold text-sm">PRO at $2.99/mo, $29.99/yr</span>
                         </div>
                         <span className="text-xs text-gray-500">No autopay</span>
                       </div>
@@ -492,12 +473,12 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                     ...(isAdmin ? [{ icon: '🛠️', label: 'Admin Panel', badge: 'System' }] : []),
                     { icon: 'ℹ️', label: 'About Us' },
                     { icon: '❓', label: 'Help Center & FAQ' },
-                    { icon: '🏆', label: 'Add a Tournament/Series', badge: 'Pro (₹99/m)' },
+                    { icon: '🏆', label: 'Add a Tournament/Series', badge: 'Pro ($2.99/m)' },
                     { icon: '🏏', label: 'Start A Match', badge: 'Free' },
                     { icon: '✂️', label: 'Video Segmentation' },
                     { icon: '🏏', label: 'My Sports' },
-                    { icon: '📈', label: 'Pro Dashboard', badge: 'Pro (₹99/m)' },
-                    { icon: '📊', label: 'My Performance', badge: 'Pro (₹99/m)' },
+                    { icon: '📈', label: 'Pro Dashboard', badge: 'Pro ($2.99/m)' },
+                    { icon: '📊', label: 'My Performance', badge: 'Pro ($2.99/m)' },
                     { icon: '⭐', label: 'Leaderboards' },
                     { icon: '🏅', label: 'Streamlify Awards' },
                     { icon: '🔗', label: 'Associations' },

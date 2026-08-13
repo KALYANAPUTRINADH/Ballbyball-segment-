@@ -77,7 +77,7 @@ const FAQ_DATA: FAQItem[] = [
     id: 'sc-8',
     category: 'billing',
     question: 'What are the Pro plan prices and features?',
-    answer: 'Streamlify Pro is available for ₹99/month or ₹999/year. Pro unlocks unlimited tournament creation, broadcast-grade graphics overlay customization, AI match summary analytics, priority high-bandwidth stream rendering, and full player performance history.'
+    answer: 'Streamlify Pro is available for $2.99/month or $29.99/year (with local payment equivalents available). Pro unlocks unlimited tournament creation, broadcast-grade graphics overlay customization, AI match summary analytics, priority high-bandwidth stream rendering, and full player performance history.'
   },
   {
     id: 'sc-9',

@@ -20,7 +20,7 @@ export function Dashboard() {
     },
     {
       title: 'AI Enhancements',
-      description: 'Auto highlights, ball detection, and performance predictions.',
+      description: 'Ball detection, player tracking, and performance predictions.',
       icon: CheckCircle2,
     },
   ];
@@ -60,7 +60,7 @@ export function Dashboard() {
             {[
               { phase: 'Phase 1', desc: 'Auth, Teams, Live Scoring', time: '1-2 months' },
               { phase: 'Phase 2', desc: 'Tournaments, Stats, Notifications', time: '2-3 months' },
-              { phase: 'Phase 3', desc: 'Live Streaming, AI Highlights', time: '2-3 months' },
+              { phase: 'Phase 3', desc: 'Live Streaming, AI Overlays', time: '2-3 months' },
               { phase: 'Phase 4', desc: 'Payments, Premium Features', time: '1-2 months' },
             ].map((item, idx) => (
               <div key={idx} className="flex items-start">
