@@ -6,6 +6,7 @@ import { ProBadge } from '../components/ProBadge';
 import { PerformanceComparison } from '../components/PerformanceComparison';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
+import { LocationSelectorModal } from '../components/LocationSelectorModal';
 
 const locations = [
   "Hyderabad",
@@ -515,37 +516,13 @@ const Home = ({ setFullScreenView, openProModal }: { setFullScreenView?: (v: str
       </div>
 
       {/* Location Modal */}
-      {showLocationModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
-              <h2 className="text-lg font-bold text-slate-900">
-                Select Location
-              </h2>
-              <button
-                onClick={() => setShowLocationModal(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {locations.map((loc, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setLocation(loc);
-                    setShowLocationModal(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors ${location === loc ? "font-bold text-[#d11a2a] bg-red-50 hover:bg-red-50" : "text-slate-700"}`}
-                >
-                  {loc}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <LocationSelectorModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        selectedLocation={location}
+        onSelectLocation={(loc) => setLocation(loc)}
+        title="Select Location (USA & Worldwide)"
+      />
 
     </div>
   );

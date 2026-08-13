@@ -403,11 +403,24 @@ const createStripeCheckoutSession = async (req: any, res: any) => {
 
     const stripe = getStripe();
     const curr = (currency || 'usd').toLowerCase();
-    const unitAmount = Math.round((Number(amount) || 2.99) * 100);
+    
+    // Zero-decimal currencies in Stripe where 1 unit = 1 currency unit
+    const zeroDecimalCurrencies = ['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'];
+    const isZeroDecimal = zeroDecimalCurrencies.includes(curr);
+    const unitAmount = isZeroDecimal 
+      ? Math.round(Number(amount) || 2.99) 
+      : Math.round((Number(amount) || 2.99) * 100);
 
     const origin = req.headers.origin || 'http://localhost:3000';
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      billing_address_collection: 'required',
+      shipping_address_collection: {
+        allowed_countries: [
+          'US', 'CA', 'GB', 'AU', 'IN', 'DE', 'FR', 'IT', 'ES', 'JP', 'SG', 'NZ', 'IE', 'NL', 'SE', 'DK', 'NO', 'FI', 'AT', 'BE', 'CH', 'BR', 'MX', 'ZA', 'AE', 'PL', 'PT', 'HK', 'PH', 'MY', 'ID', 'TH', 'VN', 'SA', 'EG', 'AR', 'CL', 'CO', 'PE'
+        ]
+      },
+      locale: 'auto',
       line_items: [
         {
           price_data: {
@@ -421,7 +434,7 @@ const createStripeCheckoutSession = async (req: any, res: any) => {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/success?payment=success&provider=stripe&amount=${amount}`,
+      success_url: `${origin}/success?payment=success&provider=stripe&amount=${amount}&currency=${curr}`,
       cancel_url: `${origin}/?payment=cancel`,
     });
     res.json({ id: session.id, url: session.url });

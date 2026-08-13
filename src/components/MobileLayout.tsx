@@ -7,6 +7,7 @@ import { PlayerSearchModal } from './PlayerSearchModal';
 import PlayerProfile from '../pages/PlayerProfile';
 import { Menu, Search, MessageSquare, Home as HomeIcon, Search as LookingIcon, Activity, Users, ShoppingBag, X, Check, Shield } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
+import { detectUserCurrency, formatCurrency } from '../utils/currency';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -30,11 +31,14 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState(false);
 
+  const currencyInfo = React.useMemo(() => detectUserCurrency(), []);
+  const currentAmount = selectedPlan === 'monthly' ? currencyInfo.monthlyPrice : currencyInfo.yearlyPrice;
+  const currentFormatted = formatCurrency(currentAmount, currencyInfo.code);
+
   const handleStripeCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 2.99 : 29.99;
-      const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
+      const description = `Streamlify Pro ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} (${currentFormatted})`;
 
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -43,8 +47,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
           'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({
-          amount,
-          currency: 'usd',
+          amount: currentAmount,
+          currency: currencyInfo.code,
           description
         })
       });
@@ -319,7 +323,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
               <div onClick={() => setSelectedPlan('monthly')} className={`rounded-xl p-4 border flex items-center justify-between cursor-pointer transition-colors group ${selectedPlan === 'monthly' ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border-amber-400/50' : 'bg-white/10 border-white/20 hover:bg-white/20'}`}>
                 <div>
                   <h3 className={`font-bold text-lg ${selectedPlan === 'monthly' ? 'text-amber-300' : 'text-white'}`}>Monthly Plan</h3>
-                  <p className="text-sm text-slate-300">$2.99 / month <span className="text-xs text-slate-400 ml-1">(~₹249)</span></p>
+                  <p className="text-sm text-slate-300">{currencyInfo.formattedMonthly} / month {currencyInfo.code !== 'usd' && <span className="text-xs text-slate-400 ml-1">($2.99 USD)</span>}</p>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'monthly' ? 'border-amber-400 bg-amber-400' : 'border-slate-400 group-hover:border-amber-400'}`}>
                   {selectedPlan === 'monthly' && <Check className="w-4 h-4 text-yellow-900" />}
@@ -330,7 +334,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                 <div className="absolute top-0 right-0 bg-amber-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">BEST VALUE</div>
                 <div>
                   <h3 className={`font-bold text-lg ${selectedPlan === 'yearly' ? 'text-amber-300' : 'text-white'}`}>Yearly Plan</h3>
-                  <p className="text-sm text-amber-100/70">$29.99 / year <span className="line-through text-slate-400 ml-2">$35.88</span></p>
+                  <p className="text-sm text-amber-100/70">{currencyInfo.formattedYearly} / year <span className="text-xs text-emerald-400 ml-2">({currencyInfo.formattedYearlyMonthlyEquivalent})</span></p>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPlan === 'yearly' ? 'border-amber-400 bg-amber-400' : 'border-slate-400 group-hover:border-amber-400'}`}>
                   {selectedPlan === 'yearly' && <Check className="w-4 h-4 text-yellow-900" />}
@@ -344,14 +348,14 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-yellow-900 font-bold py-3.5 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 text-base"
               >
-                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '$2.99' : '$29.99'} with Stripe`}
+                {loading ? 'Processing...' : `Pay ${currentFormatted} with Stripe (${currencyInfo.code.toUpperCase()})`}
               </button>
               <button 
                 onClick={handleRazorpayCheckout}
                 disabled={loading}
                 className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2 rounded-xl border border-white/20 transition-all active:scale-95 text-xs"
               >
-                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹249' : '₹2,499'} with Razorpay`}
+                {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹249' : '₹2,490'} with Razorpay`}
               </button>
             </div>
           </div>
@@ -460,7 +464,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3 text-gray-800">
                           <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded shadow-sm">PRO</span>
-                          <span className="font-bold text-sm">PRO at $2.99/mo, $29.99/yr</span>
+                          <span className="font-bold text-sm">PRO at $2.99/mo, $29.90/yr</span>
                         </div>
                         <span className="text-xs text-gray-500">No autopay</span>
                       </div>

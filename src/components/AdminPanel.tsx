@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 // Removed supabase import
 import { SportsManagement } from './SportsManagement';
+import { LocationSearchInput } from './LocationSearchInput';
 
 interface AdminUser {
   id: string;
@@ -2073,16 +2074,14 @@ export const AdminPanel: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Location / Venue</label>
-                  <input 
-                    type="text"
-                    placeholder="e.g. Kolkata Ground"
+                  <LocationSearchInput
+                    label="Location / Venue"
                     value={editingTournament ? (editingTournament.location || '') : newTournament.location}
-                    onChange={e => editingTournament
-                      ? setEditingTournament({ ...editingTournament, location: e.target.value })
-                      : setNewTournament({ ...newTournament, location: e.target.value })
+                    onChange={val => editingTournament
+                      ? setEditingTournament({ ...editingTournament, location: val })
+                      : setNewTournament({ ...newTournament, location: val })
                     }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d11a2a] text-sm"
+                    placeholder="Search US city, state, or stadium (e.g. Dallas, TX)..."
                   />
                 </div>
                 <div>

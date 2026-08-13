@@ -4,6 +4,7 @@ import { dbService } from '../lib/database';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from './ToastContext';
 import { loadStripe } from '@stripe/stripe-js';
+import { detectUserCurrency } from '../utils/currency';
 
 // Load Stripe (will only work if VITE_STRIPE_PUBLIC_KEY is provided)
 
@@ -41,10 +42,15 @@ export function PaymentModal({ amount, description, onSuccess, onClose }: Paymen
       if (user) {
         headers['Authorization'] = `Bearer ${await user.getIdToken()}`;
       }
+      const currencyInfo = detectUserCurrency();
       const response = await fetch('/api/payments/stripe/create-checkout-session', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ amount, description }),
+        body: JSON.stringify({
+          amount,
+          currency: currencyInfo.code,
+          description
+        }),
       });
       
       const session = await response.text().then(t => { try { return JSON.parse(t); } catch { return {}; } });

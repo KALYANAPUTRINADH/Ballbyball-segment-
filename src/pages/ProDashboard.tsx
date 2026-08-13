@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ArrowLeft, TrendingUp, BarChart3, Filter, Trophy, Activity, ChevronRight, Download, Calendar, Target, Zap, Users, Plus, Upload, MoreVertical, Shield, Search, X, MapPin, Trash2, Edit3, PieChart, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProBadge } from '../components/ProBadge';
+import { USA_STATES, USA_CITIES } from '../data/locations';
+import { LocationSelectorModal } from '../components/LocationSelectorModal';
 
 interface ProDashboardProps {
   onBack: () => void;
@@ -36,6 +38,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({ onBack }) => {
   // Pro Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('All');
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [formatFilter, setFormatFilter] = useState('All');
   
   React.useEffect(() => {
@@ -466,16 +469,44 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({ onBack }) => {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Location</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Location</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowLocationModal(true)}
+                          className="text-[10px] text-indigo-600 font-bold hover:underline"
+                        >
+                          🔍 Search
+                        </button>
+                      </div>
                       <select 
                         value={locationFilter}
                         onChange={(e) => setLocationFilter(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-bold focus:outline-none"
                       >
                         <option value="All">All Locations</option>
-                        <option value="Local">Local Grounds</option>
-                        <option value="National">National League</option>
-                        <option value="Online">Online / Esports</option>
+                        <optgroup label="Popular US Cities">
+                          <option value="Dallas, TX">Dallas, TX</option>
+                          <option value="Los Angeles, CA">Los Angeles, CA</option>
+                          <option value="New York, NY">New York, NY</option>
+                          <option value="San Jose, CA">San Jose, CA</option>
+                          <option value="Miami, FL">Miami, FL</option>
+                          <option value="Houston, TX">Houston, TX</option>
+                          <option value="Chicago, IL">Chicago, IL</option>
+                        </optgroup>
+                        <optgroup label="US States">
+                          {USA_STATES.slice(0, 15).map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="US Cricket Venues">
+                          <option value="Grand Prairie Stadium">Grand Prairie Stadium (TX)</option>
+                          <option value="Central Broward Park">Central Broward Park (FL)</option>
+                          <option value="Church Street Park">Church Street Park (NC)</option>
+                          <option value="Oaks Park">Oaks Park (CA)</option>
+                        </optgroup>
+                        <option value="India">India</option>
+                        <option value="International">International</option>
                       </select>
                     </div>
 
@@ -774,6 +805,15 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({ onBack }) => {
           </div>
         </div>
       )}
+
+      {/* Location Selector Modal */}
+      <LocationSelectorModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        selectedLocation={locationFilter}
+        onSelectLocation={(loc) => setLocationFilter(loc)}
+        title="Filter Tournaments by Location"
+      />
     </div>
   );
 };

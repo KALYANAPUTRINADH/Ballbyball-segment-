@@ -5,6 +5,7 @@ import { TournamentManagement } from './TournamentManagement';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 import { ProUpgradeModal } from './ProUpgradeModal';
+import { LocationSearchInput } from './LocationSearchInput';
 
 interface Tournament {
   id: number;
@@ -596,13 +597,11 @@ export function Tournaments({ activeSport, setFullScreenView }: { activeSport?: 
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                <input 
-                  type="text" 
+                <LocationSearchInput
+                  label="Location"
                   value={newTournament.location}
-                  onChange={e => setNewTournament({...newTournament, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d11a2a]"
-                  placeholder="e.g. Lords Ground"
+                  onChange={(val) => setNewTournament({ ...newTournament, location: val })}
+                  placeholder="Search US city, state, or stadium (e.g. Dallas, TX)..."
                 />
               </div>
               

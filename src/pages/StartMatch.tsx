@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, Search, Shield, Loader2, Camera, Video, EyeOff, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CountryCodeSelect } from '../components/CountryCodeSelect';
+import { LocationSearchInput } from '../components/LocationSearchInput';
 
 const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | null) => void }) => {
   const [teamSize, setTeamSize] = useState(11);
@@ -723,13 +724,11 @@ const StartMatch = ({ setFullScreenView }: { setFullScreenView: (v: string | nul
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Location/Ground</label>
-                  <input 
-                    type="text" 
-                    value={location} 
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Lords Cricket Ground"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#d11a2a] focus:ring-1 focus:ring-[#d11a2a]"
+                  <LocationSearchInput
+                    label="Location/Ground"
+                    value={location}
+                    onChange={setLocation}
+                    placeholder="Search US city, state, or stadium (e.g. Dallas, TX)..."
                   />
                 </div>
               </div>

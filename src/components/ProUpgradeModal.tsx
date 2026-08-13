@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Check, CreditCard } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Check, CreditCard, Globe } from 'lucide-react';
 import { dbService } from '../lib/database';
 import { useAuth } from '../contexts/AuthContext';
+import { detectUserCurrency, SUPPORTED_CURRENCIES, formatCurrency } from '../utils/currency';
 
 interface ProUpgradeModalProps {
   isOpen: boolean;
@@ -14,15 +15,18 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
 
+  const currencyInfo = useMemo(() => detectUserCurrency(), []);
+
   if (!isOpen) return null;
+
+  const currentAmount = selectedPlan === 'monthly' ? currencyInfo.monthlyPrice : currencyInfo.yearlyPrice;
+  const currentFormatted = formatCurrency(currentAmount, currencyInfo.code);
 
   const activateProSubscription = async (paymentMethod: string) => {
     if (!user?.uid) {
       alert('Please sign in to upgrade to Pro.');
       return;
     }
-    const amount = selectedPlan === 'monthly' ? 2.99 : 29.99;
-    const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly' : 'Streamlify Pro Yearly';
 
     const expiryDate = new Date();
     if (selectedPlan === 'yearly') {
@@ -39,10 +43,10 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
 
     await dbService.create('transactions', {
       user_id: user.uid,
-      amount: amount,
-      currency: 'USD',
+      amount: currentAmount,
+      currency: currencyInfo.code.toUpperCase(),
       status: 'completed',
-      description: `${description} (${paymentMethod})`,
+      description: `Streamlify Pro ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} (${paymentMethod})`,
       created_at: new Date().toISOString()
     });
 
@@ -54,8 +58,7 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
   const handleStripeCheckout = async () => {
     try {
       setLoading(true);
-      const amount = selectedPlan === 'monthly' ? 2.99 : 29.99;
-      const description = selectedPlan === 'monthly' ? 'Streamlify Pro Monthly ($2.99/mo)' : 'Streamlify Pro Yearly ($29.99/yr)';
+      const description = `Streamlify Pro ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} (${currentFormatted})`;
 
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -63,7 +66,11 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await user?.getIdToken()}`
         },
-        body: JSON.stringify({ amount, currency: 'usd', description })
+        body: JSON.stringify({
+          amount: currentAmount,
+          currency: currencyInfo.code,
+          description
+        })
       });
       const data = await res.json();
       if (data.url) {
@@ -168,6 +175,14 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
             </ul>
           </div>
 
+          {/* Location / Currency Badge */}
+          <div className="flex items-center justify-between text-xs text-slate-500 mb-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="flex items-center gap-1 font-medium text-slate-700">
+              <Globe className="w-3.5 h-3.5 text-indigo-600" /> Detected Currency: <strong className="text-slate-900">{currencyInfo.name} ({currencyInfo.code.toUpperCase()})</strong>
+            </span>
+            <span className="text-[10px] text-slate-400">Auto-mapped</span>
+          </div>
+
           {/* Plan Selector */}
           <div className="grid grid-cols-2 gap-3 mb-5">
             <button
@@ -179,8 +194,10 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
               }`}
             >
               <div className="font-bold text-sm">Monthly Plan</div>
-              <div className="text-xl font-black mt-1">$2.99<span className="text-xs font-normal text-slate-500"> / mo</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">(~₹249 INR)</div>
+              <div className="text-xl font-black mt-1">{currencyInfo.formattedMonthly}<span className="text-xs font-normal text-slate-500"> / mo</span></div>
+              {currencyInfo.code !== 'usd' && (
+                <div className="text-[10px] text-slate-400 mt-1">($2.99 USD)</div>
+              )}
             </button>
 
             <button
@@ -195,8 +212,8 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
                 Best Value
               </span>
               <div className="font-bold text-sm">Yearly Plan</div>
-              <div className="text-xl font-black mt-1">$29.99<span className="text-xs font-normal text-slate-500"> / yr</span></div>
-              <div className="text-[10px] text-slate-400 mt-1">(~₹2,499 INR)</div>
+              <div className="text-xl font-black mt-1">{currencyInfo.formattedYearly}<span className="text-xs font-normal text-slate-500"> / yr</span></div>
+              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">{currencyInfo.formattedYearlyMonthlyEquivalent}</div>
             </button>
           </div>
 
@@ -206,14 +223,14 @@ export function ProUpgradeModal({ isOpen, onClose, featureName }: ProUpgradeModa
               disabled={loading}
               className="w-full py-3 px-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all flex items-center justify-center shadow-lg shadow-indigo-200"
             >
-              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '$2.99' : '$29.99'} with Stripe (Global Cards/Apple/Google Pay)`}
+              {loading ? 'Processing...' : `Pay ${currentFormatted} with Stripe (${currencyInfo.code.toUpperCase()})`}
             </button>
             <button 
               onClick={handleRazorpayCheckout}
               disabled={loading}
               className="w-full py-2.5 px-4 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition-all flex items-center justify-center text-xs"
             >
-              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹249' : '₹2,499'} with Razorpay (India UPI / Netbanking)`}
+              {loading ? 'Processing...' : `Pay ${selectedPlan === 'monthly' ? '₹249' : '₹2,490'} with Razorpay (India UPI)`}
             </button>
           </div>
           
