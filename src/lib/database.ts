@@ -44,7 +44,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   return errInfo;
 }
 
-const NO_COMPRESS_KEYS = ["id","owner_id","created_by","ownerId","author_id","user_id","status","sport_type","sportType","phone","email","role","teamId","name","type","created_at","updated_at","date","time","searchType","is_pro","pro_expiration_date","venue","title","team_a","team_b","teamA","teamB","match_id","tournament_id","player_id","club_id","mobileNumber","username","displayName"];
+const NO_COMPRESS_KEYS = ["id","owner_id","created_by","ownerId","author_id","user_id","status","sport_type","sportType","phone","email","role","teamId","name","type","created_at","updated_at","date","time","searchType","is_pro","pro_expiration_date","venue","title","team_a","team_b","teamA","teamB","match_id","tournament_id","player_id","club_id","mobileNumber","username","displayName","product_id","product_name","notified_at","category","domain","brand","sku","code","is_active","featured","description","image_url","logo_url","origin","authenticity_prefix","order_number","payment_method","payment_status","payment_reference","payer_bank_name","receiving_account_id","receiving_account_label","tracking_number","currency","user_name","comment","rating","verified_purchase","verified_order_number","event_type","session_id","checkout_mode","provider","label","last4","is_default","account_type","account_holder_name","bank_name","account_number","ifsc_or_routing","branch_name","upi_id","paypal_handle","payment_link","qr_payload","qr_code_url","razorpay_key_id","razorpay_account_id","currency_scope","instructions","is_primary"];
 
 function compressValue(val: any): any {
   try {

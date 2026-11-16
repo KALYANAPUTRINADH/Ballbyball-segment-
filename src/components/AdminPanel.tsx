@@ -3,12 +3,13 @@ import {
   Users, Shield, Trash2, Edit, Search, Plus, CreditCard, Activity, Check, X, 
   ChevronRight, RefreshCw, UserCheck, Crown, AlertTriangle, Filter, DollarSign,
   TrendingUp, Award, MapPin, Calendar, Smartphone, Mail, ShieldAlert,
-  Trophy, Film, Clock, Play, ChevronLeft
+  Trophy, Film, Clock, Play, ChevronLeft, ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { dbService } from '../lib/database';
 // Removed supabase import
 import { SportsManagement } from './SportsManagement';
+import { StoreAdminManager } from './StoreAdminManager';
 import { LocationSearchInput } from './LocationSearchInput';
 
 interface AdminUser {
@@ -36,7 +37,7 @@ export const AdminPanel: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profiles' | 'transactions' | 'stats' | 'tournaments_segments' | 'sports_management'>('profiles');
+  const [activeTab, setActiveTab] = useState<'profiles' | 'transactions' | 'stats' | 'tournaments_segments' | 'sports_management' | 'store_management'>('profiles');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
   const [proFilter, setProFilter] = useState<'all' | 'pro' | 'free'>('all');
@@ -567,6 +568,20 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-14 h-14 rounded-xl bg-rose-50 text-[#d11a2a] flex items-center justify-center mb-4 border border-rose-200">
+          <ShieldAlert className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Administrator Access Required</h2>
+        <p className="text-sm text-slate-600 max-w-md mt-2">
+          This command center is restricted to authorized system and store administrators.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen text-slate-800 pb-12" id="admin_panel_root">
       {/* Alert Notification */}
@@ -652,7 +667,7 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         {/* Tab Controls */}
-        <div className="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl p-1 shadow-sm gap-2">
+        <div className="flex overflow-x-auto border-b border-slate-200 mb-6 bg-white rounded-t-xl p-1 shadow-sm gap-2">
           <button 
             onClick={() => setActiveTab('profiles')}
             className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
@@ -699,7 +714,7 @@ export const AdminPanel: React.FC = () => {
           </button>
           <button 
             onClick={() => setActiveTab('sports_management')}
-            className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === 'sports_management' 
                 ? 'bg-[#d11a2a] text-white shadow-sm' 
                 : 'text-slate-600 hover:bg-slate-50'
@@ -707,6 +722,17 @@ export const AdminPanel: React.FC = () => {
           >
             <Activity className="w-4 h-4" />
             Sports Management
+          </button>
+          <button 
+            onClick={() => setActiveTab('store_management')}
+            className={`flex-1 py-3 px-4 font-semibold text-sm rounded-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap shrink-0 ${
+              activeTab === 'store_management' 
+                ? 'bg-[#d11a2a] text-white shadow-sm' 
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            Store &amp; Gear
           </button>
         </div>
 
@@ -1558,6 +1584,9 @@ export const AdminPanel: React.FC = () => {
             )}
             {activeTab === 'sports_management' && (
               <SportsManagement supportedSports={supportedSports} setSupportedSports={setSupportedSports} />
+            )}
+            {activeTab === 'store_management' && (
+              <StoreAdminManager embedded />
             )}
           </>
         )}

@@ -387,6 +387,89 @@ app.post('/api/notifications/whatsapp', requireAuth, async (req: AuthRequest, re
   }
 });
 
+// Store Back-in-Stock Email Notification Dispatch (Admin Only)
+app.post('/api/store/notify-restock', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const caller = req.user;
+    let isCallerAdmin = caller?.role === 'admin' || caller?.email === 'trinadhkalyanapu@gmail.com';
+    if (!isCallerAdmin && caller?.uid) {
+      try {
+        const profSnap = await db.collection('profiles').doc(caller.uid).get();
+        if (profSnap.exists && profSnap.data()?.role === 'admin') {
+          isCallerAdmin = true;
+        }
+      } catch {
+        // ignore profile lookup error
+      }
+    }
+    if (!isCallerAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Store Admin privileges required' });
+    }
+
+    const { productId, productName, sku, brand, stock, productUrl, recipients } = req.body || {};
+    if (!productName || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ error: 'Missing productName or recipients' });
+    }
+
+    const validRecipients = recipients
+      .filter((r: any) => r && typeof r.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email.trim()))
+      .slice(0, 200);
+
+    let deliveryMode: 'resend' | 'logged' = 'logged';
+    let emailsSent = 0;
+
+    if (process.env.RESEND_API_KEY && validRecipients.length > 0) {
+      const fromAddr = process.env.RESEND_FROM_EMAIL || 'Store Alerts <onboarding@resend.dev>';
+      const safeLink = typeof productUrl === 'string' && productUrl.startsWith('http') ? productUrl : '';
+      const subject = `Back in Stock: ${productName} (${brand || 'Pro Gear'})`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; color: #0f172a; max-width: 560px; margin: 0 auto; padding: 24px;">
+          <h2 style="margin: 0 0 12px; color: #d11a2a;">Back in Stock Alert</h2>
+          <p style="font-size: 14px; line-height: 1.5; margin: 0 0 12px;">
+            Good news! <strong>${String(productName)}</strong>${sku ? ` (SKU ${String(sku)})` : ''} is back in stock with <strong>${Number(stock) || 1}</strong> units available.
+          </p>
+          ${safeLink ? `<p style="margin: 20px 0;"><a href="${safeLink}" style="background:#d11a2a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">Shop Now</a></p>` : ''}
+          <p style="font-size: 12px; color: #64748b; margin-top: 20px;">You received this because you clicked "Notify Me" for ${String(productName)} (${String(productId || '')}).</p>
+        </div>
+      `;
+
+      for (const rec of validRecipients) {
+        try {
+          const emailRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: fromAddr,
+              to: [rec.email.trim()],
+              subject,
+              html,
+            }),
+          });
+          if (emailRes.ok) {
+            emailsSent++;
+            deliveryMode = 'resend';
+          }
+        } catch (emailErr) {
+          console.warn('Resend delivery error:', emailErr);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      recipientCount: validRecipients.length,
+      emailsSent,
+      deliveryMode,
+    });
+  } catch (err: any) {
+    console.error('Error dispatching store restock notifications:', err);
+    res.status(500).json({ error: err.message || 'Failed to dispatch restock notifications' });
+  }
+});
+
 // Stripe Integration
 const createStripeCheckoutSession = async (req: any, res: any) => {
   const { amount = 2.99, description = 'Streamlify Pro Subscription', currency = 'usd' } = req.body || {};
@@ -450,14 +533,38 @@ app.post('/api/payments/stripe/create-checkout-session', requireAuth, createStri
 // Razorpay Integration
 app.post('/api/payments/razorpay/create-order', requireAuth, async (req, res) => {
   try {
+    const serverKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_TFiA0nbeLZ9yWg';
+    const {
+      amount,
+      description,
+      currency,
+      receivingAccountId,
+      receivingAccountLabel,
+      razorpayAccountId,
+      razorpayKeyId,
+    } = req.body || {};
+
+    if (razorpayKeyId && String(razorpayKeyId).trim() !== serverKeyId) {
+      return res.json({
+        orderId: null,
+        customKeyId: String(razorpayKeyId).trim(),
+        amount: Math.round((Number(amount) || 49) * 100),
+        currency: String(currency || 'INR').toUpperCase(),
+        receivingAccountLabel: receivingAccountLabel || undefined,
+        razorpayAccountId: razorpayAccountId || undefined,
+      });
+    }
+
     const razorpay = getRazorpay();
-    const { amount, description } = req.body;
     const options = {
-      amount: (amount || 49) * 100, // amount in paise
-      currency: "INR",
+      amount: Math.round((Number(amount) || 49) * 100), // amount in paise
+      currency: String(currency || 'INR').toUpperCase(),
       receipt: `receipt_${Date.now()}`,
       notes: {
-        description: description || 'Streamlify Pro Subscription'
+        description: description || 'Streamlify Pro Subscription',
+        ...(receivingAccountId ? { receiving_account_id: String(receivingAccountId) } : {}),
+        ...(receivingAccountLabel ? { receiving_account_label: String(receivingAccountLabel) } : {}),
+        ...(razorpayAccountId ? { razorpay_account_id: String(razorpayAccountId) } : {}),
       }
     };
     const order = await razorpay.orders.create(options);

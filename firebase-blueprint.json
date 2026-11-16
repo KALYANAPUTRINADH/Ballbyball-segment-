@@ -60,6 +60,257 @@
         "action_url": { "type": "string" }
       },
       "required": ["user_id", "title", "body", "type", "is_read", "created_at"]
+    },
+    "StoreProduct": {
+      "title": "Store Product",
+      "description": "Cricket, sports, and indoor games gear listed in the Streamlify Store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sku": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 160 },
+        "brand": { "type": "string", "maxLength": 64 },
+        "domain": { "type": "string", "enum": ["Cricket", "Team Sports", "Racket & Court", "Fitness & Athletics", "Indoor & Board Games", "Esports & Gaming", "Sports", "Indoor & Games"] },
+        "category": { "type": "string", "maxLength": 80 },
+        "sport_type": { "type": "string", "maxLength": 60 },
+        "price_usd": { "type": "number" },
+        "mrp_usd": { "type": "number" },
+        "price_inr": { "type": "number" },
+        "mrp_inr": { "type": "number" },
+        "stock": { "type": "number" },
+        "image_url": { "type": "string", "maxLength": 2000 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "is_active": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sku", "name", "brand", "domain", "category", "price_usd", "price_inr", "stock", "is_active"]
+    },
+    "StoreOrder": {
+      "title": "Store Order",
+      "description": "Customer gear order with shipping and payment state",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "order_number": { "type": "string", "maxLength": 64 },
+        "user_id": { "type": "string" },
+        "customer_name": { "type": "string", "maxLength": 120 },
+        "customer_email": { "type": "string", "maxLength": 160 },
+        "customer_phone": { "type": "string", "maxLength": 40 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "shipping_fee": { "type": "number" },
+        "total": { "type": "number" },
+        "payment_method": { "type": "string", "enum": ["stripe", "razorpay", "cod", "bank_transfer", "upi", "paypal", "custom_qr"] },
+        "payment_status": { "type": "string", "enum": ["paid", "pending_cod", "awaiting_verification", "failed"] },
+        "payment_reference": { "type": "string", "maxLength": 120 },
+        "payer_bank_name": { "type": "string", "maxLength": 100 },
+        "receiving_account_id": { "type": "string", "maxLength": 128 },
+        "receiving_account_label": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["pending", "processing", "packed", "shipped", "delivered", "cancelled"] },
+        "tracking_number": { "type": "string", "maxLength": 100 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["order_number", "user_id", "customer_name", "total", "payment_method", "status"]
+    },
+    "StoreReview": {
+      "title": "Store Review",
+      "description": "Verified purchaser product review and star rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "user_name": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number" },
+        "title": { "type": "string", "maxLength": 140 },
+        "comment": { "type": "string", "maxLength": 1000 },
+        "verified_purchase": { "type": "boolean" },
+        "verified_order_number": { "type": "string", "maxLength": 64 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["product_id", "user_id", "user_name", "rating", "comment", "verified_purchase"]
+    },
+    "StoreCoupon": {
+      "title": "Store Coupon",
+      "description": "Promotional discount codes managed by store admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "maxLength": 40 },
+        "discount_type": { "type": "string", "enum": ["percent", "flat"] },
+        "value": { "type": "number" },
+        "min_order_usd": { "type": "number" },
+        "description": { "type": "string", "maxLength": 200 },
+        "is_active": { "type": "boolean" }
+      },
+      "required": ["code", "discount_type", "value", "is_active"]
+    },
+    "StoreWishlistItem": {
+      "title": "Store Wishlist Item",
+      "description": "Bookmarked store gear item saved by a user for later purchase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "product_id": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "product_id", "created_at"]
+    },
+    "StoreBrand": {
+      "title": "Store Custom Brand",
+      "description": "Admin-managed custom equipment and apparel brands",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 64 },
+        "domain": { "type": "string", "enum": ["All", "Cricket", "Team Sports", "Racket & Court", "Fitness & Athletics", "Indoor & Board Games", "Esports & Gaming", "Sports", "Indoor & Games"] },
+        "origin": { "type": "string", "maxLength": 80 },
+        "authenticity_prefix": { "type": "string", "maxLength": 32 },
+        "logo_url": { "type": "string" },
+        "description": { "type": "string", "maxLength": 500 },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "domain", "is_active"]
+    },
+    "StoreAlertSettings": {
+      "title": "Store Automated Stock Alert Settings",
+      "description": "Admin configuration for automated low-stock thresholds and alert scope",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "scope": { "type": "string", "enum": ["popular_cricket", "all_cricket", "all_popular", "all_catalog"] },
+        "popular_threshold": { "type": "number" },
+        "default_threshold": { "type": "number" },
+        "popular_min_units_ordered": { "type": "number" },
+        "sync_to_global_bell": { "type": "boolean" },
+        "toast_on_trigger": { "type": "boolean" },
+        "updated_by": { "type": "string", "maxLength": 128 },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["enabled", "scope", "popular_threshold", "default_threshold"]
+    },
+    "StoreStockAlert": {
+      "title": "Store Stock Alert Notification",
+      "description": "Automated low-stock notification generated when gear drops below threshold",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string", "maxLength": 128 },
+        "product_name": { "type": "string", "maxLength": 160 },
+        "sku": { "type": "string", "maxLength": 64 },
+        "brand": { "type": "string", "maxLength": 64 },
+        "domain": { "type": "string", "maxLength": 64 },
+        "sport_type": { "type": "string", "maxLength": 64 },
+        "current_stock": { "type": "number" },
+        "threshold": { "type": "number" },
+        "severity": { "type": "string", "enum": ["out_of_stock", "critical", "low"] },
+        "status": { "type": "string", "enum": ["active", "acknowledged", "resolved"] },
+        "is_read": { "type": "boolean" },
+        "is_popular": { "type": "boolean" },
+        "popularity_reason": { "type": "string", "maxLength": 160 },
+        "units_ordered": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "resolved_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["product_id", "product_name", "sku", "current_stock", "threshold", "severity", "status", "is_read"]
+    },
+    "StoreRestockRequest": {
+      "title": "Store Restock Notification Request",
+      "description": "Email alert signup submitted by users when a store item is out of stock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string", "maxLength": 128 },
+        "product_name": { "type": "string", "maxLength": 160 },
+        "sku": { "type": "string", "maxLength": 64 },
+        "brand": { "type": "string", "maxLength": 64 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "user_name": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["waiting", "notified", "cancelled"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "notified_at": { "type": "string", "format": "date-time" },
+        "last_stock_notified": { "type": "number" }
+      },
+      "required": ["product_id", "product_name", "sku", "email", "status"]
+    },
+    "StoreSavedPaymentMethod": {
+      "title": "Store Saved Payment Method",
+      "description": "Masked saved payment method token for 1-click Quick Buy checkout",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "provider": { "type": "string", "enum": ["stripe_card", "razorpay_upi", "cod", "bank_transfer", "upi", "paypal", "custom_qr"] },
+        "label": { "type": "string", "maxLength": 80 },
+        "brand": { "type": "string", "maxLength": 40 },
+        "last4": { "type": "string", "maxLength": 12 },
+        "expiry": { "type": "string", "maxLength": 10 },
+        "is_default": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "provider", "label", "is_default", "created_at"]
+    },
+    "StorePayoutAccount": {
+      "title": "Store Admin Payout & Bank Account",
+      "description": "Admin-managed bank, UPI, PayPal, Custom Payment QR, Razorpay, and Stripe receiving accounts for buyer payments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "maxLength": 80 },
+        "account_type": { "type": "string", "enum": ["bank_transfer", "razorpay", "upi", "stripe", "paypal", "custom_qr"] },
+        "account_holder_name": { "type": "string", "maxLength": 120 },
+        "bank_name": { "type": "string", "maxLength": 120 },
+        "account_number": { "type": "string", "maxLength": 64 },
+        "ifsc_or_routing": { "type": "string", "maxLength": 40 },
+        "branch_name": { "type": "string", "maxLength": 120 },
+        "upi_id": { "type": "string", "maxLength": 100 },
+        "paypal_handle": { "type": "string", "maxLength": 120 },
+        "payment_link": { "type": "string", "maxLength": 500 },
+        "qr_payload": { "type": "string", "maxLength": 600 },
+        "qr_code_url": { "type": "string", "maxLength": 120000 },
+        "razorpay_key_id": { "type": "string", "maxLength": 80 },
+        "razorpay_account_id": { "type": "string", "maxLength": 80 },
+        "currency_scope": { "type": "string", "enum": ["INR", "USD", "ALL"] },
+        "instructions": { "type": "string", "maxLength": 400 },
+        "is_active": { "type": "boolean" },
+        "is_primary": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["label", "account_type", "account_holder_name", "currency_scope", "is_active", "is_primary"]
+    },
+    "StoreAnalyticsEvent": {
+      "title": "Store Funnel Analytics Event",
+      "description": "Real storefront traffic, product view, cart/quick-buy intent, and order conversion events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "event_type": { "type": "string", "enum": ["store_view", "product_view", "add_to_cart", "quick_buy_open", "checkout_start", "order_completed"] },
+        "product_id": { "type": "string", "maxLength": 128 },
+        "product_name": { "type": "string", "maxLength": 160 },
+        "brand": { "type": "string", "maxLength": 64 },
+        "domain": { "type": "string", "maxLength": 64 },
+        "sport_type": { "type": "string", "maxLength": 64 },
+        "checkout_mode": { "type": "string", "enum": ["quick_buy", "cart_checkout"] },
+        "session_id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "revenue_usd": { "type": "number" },
+        "units": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["event_type", "session_id", "user_id", "created_at"]
     }
   },
   "firestore": {
@@ -110,6 +361,54 @@
     "/messages/{msgId}": {
       "schema": "object",
       "description": "Team chat messages"
+    },
+    "/store_products/{productId}": {
+      "schema": "StoreProduct",
+      "description": "Cricket, sports, and indoor games gear catalog"
+    },
+    "/store_orders/{orderId}": {
+      "schema": "StoreOrder",
+      "description": "Customer store orders and fulfillment tracking"
+    },
+    "/store_reviews/{reviewId}": {
+      "schema": "StoreReview",
+      "description": "Product reviews and ratings"
+    },
+    "/store_coupons/{couponId}": {
+      "schema": "StoreCoupon",
+      "description": "Admin-managed promotional discount coupons"
+    },
+    "/store_wishlist/{wishlistId}": {
+      "schema": "StoreWishlistItem",
+      "description": "User-bookmarked store wishlist items for later purchase"
+    },
+    "/store_brands/{brandId}": {
+      "schema": "StoreBrand",
+      "description": "Admin-created custom brands directory for the Store"
+    },
+    "/store_alert_settings/{settingId}": {
+      "schema": "StoreAlertSettings",
+      "description": "Admin-only configuration for automated store stock alerts"
+    },
+    "/store_stock_alerts/{alertId}": {
+      "schema": "StoreStockAlert",
+      "description": "Admin-only automated low-stock alerts and resolution log"
+    },
+    "/store_restock_requests/{requestId}": {
+      "schema": "StoreRestockRequest",
+      "description": "Out-of-stock Notify Me email waitlist subscriptions reflected in Admin Panel"
+    },
+    "/store_payment_methods/{methodId}": {
+      "schema": "StoreSavedPaymentMethod",
+      "description": "User saved payment methods (masked labels only) for Quick Buy 1-click checkout"
+    },
+    "/store_analytics_events/{eventId}": {
+      "schema": "StoreAnalyticsEvent",
+      "description": "Storefront views, funnel intent, and conversion tracking events for Store Analytics"
+    },
+    "/store_payout_accounts/{accountId}": {
+      "schema": "StorePayoutAccount",
+      "description": "Admin bank accounts, UPI VPAs, Razorpay and Stripe settlement accounts for buyer transfers"
     }
   }
 }

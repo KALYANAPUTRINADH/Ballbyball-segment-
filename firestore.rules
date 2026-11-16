@@ -191,5 +191,336 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isMock() || isSignedIn();
     }
+
+    // 15. STORE HELPERS & COLLECTIONS
+    function isValidStoreId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidStoreProduct(data) {
+      return data.keys().hasAll(['sku', 'name', 'brand', 'domain', 'category', 'price_usd', 'price_inr', 'stock', 'is_active'])
+        && data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 64
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 160
+        && data.brand is string && data.brand.size() >= 1 && data.brand.size() <= 64
+        && data.domain in ['Cricket', 'Team Sports', 'Racket & Court', 'Fitness & Athletics', 'Indoor & Board Games', 'Esports & Gaming', 'Sports', 'Indoor & Games']
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.price_usd is number && data.price_usd >= 0
+        && data.price_inr is number && data.price_inr >= 0
+        && data.stock is number && data.stock >= 0
+        && data.is_active is bool
+        && (!('description' in data) || (data.description is string && data.description.size() <= 2000));
+    }
+
+    function isValidStoreOrder(data) {
+      return data.keys().hasAll(['order_number', 'user_id', 'customer_name', 'total', 'payment_method', 'status'])
+        && data.order_number is string && data.order_number.size() >= 1 && data.order_number.size() <= 64
+        && data.user_id is string && data.user_id.size() >= 1 && data.user_id.size() <= 128
+        && data.customer_name is string && data.customer_name.size() >= 1 && data.customer_name.size() <= 120
+        && data.total is number && data.total >= 0
+        && data.payment_method in ['stripe', 'razorpay', 'cod', 'bank_transfer', 'upi', 'paypal', 'custom_qr']
+        && data.status in ['pending', 'processing', 'packed', 'shipped', 'delivered', 'cancelled']
+        && (!('payment_reference' in data) || (data.payment_reference is string && data.payment_reference.size() <= 120))
+        && (!('payer_bank_name' in data) || (data.payer_bank_name is string && data.payer_bank_name.size() <= 100))
+        && (!('receiving_account_id' in data) || (data.receiving_account_id is string && data.receiving_account_id.size() <= 128))
+        && (!('receiving_account_label' in data) || (data.receiving_account_label is string && data.receiving_account_label.size() <= 120));
+    }
+
+    function isValidStoreReview(data) {
+      return data.keys().hasAll(['product_id', 'user_id', 'user_name', 'rating', 'comment', 'verified_purchase'])
+        && data.keys().hasOnly(['id', 'product_id', 'user_id', 'user_name', 'rating', 'title', 'comment', 'verified_purchase', 'verified_order_number', 'created_at', 'updated_at'])
+        && data.product_id is string && data.product_id.size() >= 1 && data.product_id.size() <= 128
+        && data.user_id is string && data.user_id.size() >= 1 && data.user_id.size() <= 128
+        && data.user_name is string && data.user_name.size() >= 1 && data.user_name.size() <= 100
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 1000
+        && data.verified_purchase is bool
+        && (!('title' in data) || (data.title is string && data.title.size() <= 140))
+        && (!('verified_order_number' in data) || (data.verified_order_number is string && data.verified_order_number.size() <= 64))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
+        && (!('updated_at' in data) || (data.updated_at is string && data.updated_at.size() <= 64));
+    }
+
+    function isValidStoreCoupon(data) {
+      return data.keys().hasAll(['code', 'discount_type', 'value', 'is_active'])
+        && data.code is string && data.code.size() >= 2 && data.code.size() <= 40
+        && data.discount_type in ['percent', 'flat']
+        && data.value is number && data.value >= 0
+        && data.is_active is bool;
+    }
+
+    match /store_products/{productId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidStoreId(productId) && isValidStoreProduct(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /store_orders/{orderId} {
+      allow get: if isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid);
+      allow list: if isMock() || isAdmin() || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isValidStoreId(orderId) && isValidStoreOrder(incoming()) && (
+        isMock() || isAdmin() || (isSignedIn() && incoming().user_id == request.auth.uid)
+      );
+      allow update: if isValidStoreId(orderId) && isValidStoreOrder(incoming()) && (
+        isAdmin() || (
+          isSignedIn() &&
+          existing().user_id == request.auth.uid &&
+          existing().status == 'pending' &&
+          incoming().status == 'cancelled' &&
+          incoming().user_id == existing().user_id &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updated_at'])
+        )
+      );
+      allow delete: if isAdmin() && isValidStoreId(orderId);
+    }
+
+    match /store_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidStoreId(reviewId) && isValidStoreReview(incoming()) && (
+        isMock() || isAdmin() || (
+          isSignedIn() &&
+          incoming().user_id == request.auth.uid &&
+          incoming().verified_purchase == true
+        )
+      );
+      allow update: if isValidStoreId(reviewId) && isValidStoreReview(incoming()) && (
+        isMock() || isAdmin() || (
+          isSignedIn() &&
+          existing().user_id == request.auth.uid &&
+          incoming().user_id == existing().user_id &&
+          incoming().product_id == existing().product_id &&
+          incoming().verified_purchase == existing().verified_purchase &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'title', 'comment', 'updated_at'])
+        )
+      );
+      allow delete: if isValidStoreId(reviewId) && (
+        isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid)
+      );
+    }
+
+    function isValidStoreWishlist(data) {
+      return data.keys().hasAll(['user_id', 'product_id', 'created_at'])
+        && data.keys().hasOnly(['id', 'user_id', 'product_id', 'created_at'])
+        && data.user_id is string && data.user_id.size() >= 1 && data.user_id.size() <= 128
+        && data.product_id is string && data.product_id.size() >= 1 && data.product_id.size() <= 128
+        && data.created_at is string && data.created_at.size() <= 64;
+    }
+
+    function isValidStoreBrand(data) {
+      return data.keys().hasAll(['name', 'domain', 'is_active'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 64
+        && data.domain in ['All', 'Cricket', 'Team Sports', 'Racket & Court', 'Fitness & Athletics', 'Indoor & Board Games', 'Esports & Gaming', 'Sports', 'Indoor & Games']
+        && data.is_active is bool
+        && (!('origin' in data) || (data.origin is string && data.origin.size() <= 80))
+        && (!('authenticity_prefix' in data) || (data.authenticity_prefix is string && data.authenticity_prefix.size() <= 32))
+        && (!('logo_url' in data) || (data.logo_url is string && data.logo_url.size() <= 500000))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500));
+    }
+
+    match /store_coupons/{couponId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidStoreId(couponId) && isValidStoreCoupon(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /store_brands/{brandId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidStoreId(brandId) && isValidStoreBrand(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /store_wishlist/{wishlistId} {
+      allow get: if isMock() || (isSignedIn() && existing().user_id == request.auth.uid);
+      allow list: if isMock() || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isValidStoreId(wishlistId) && isValidStoreWishlist(incoming()) && (
+        isMock() || (isSignedIn() && incoming().user_id == request.auth.uid)
+      );
+      allow update: if false;
+      allow delete: if isValidStoreId(wishlistId) && (
+        isMock() || (isSignedIn() && existing().user_id == request.auth.uid)
+      );
+    }
+
+    function isValidStoreAlertSettings(data) {
+      return data.keys().hasAll(['enabled', 'scope', 'popular_threshold', 'default_threshold'])
+        && data.enabled is bool
+        && data.scope in ['popular_cricket', 'all_cricket', 'all_popular', 'all_catalog']
+        && data.popular_threshold is number && data.popular_threshold >= 0 && data.popular_threshold <= 10000
+        && data.default_threshold is number && data.default_threshold >= 0 && data.default_threshold <= 10000
+        && (!('popular_min_units_ordered' in data) || (data.popular_min_units_ordered is number && data.popular_min_units_ordered >= 0 && data.popular_min_units_ordered <= 10000))
+        && (!('sync_to_global_bell' in data) || data.sync_to_global_bell is bool)
+        && (!('toast_on_trigger' in data) || data.toast_on_trigger is bool)
+        && (!('updated_by' in data) || (data.updated_by is string && data.updated_by.size() <= 128))
+        && (!('updated_at' in data) || (data.updated_at is string && data.updated_at.size() <= 64));
+    }
+
+    function isValidStoreStockAlert(data) {
+      return data.keys().hasAll(['product_id', 'product_name', 'sku', 'current_stock', 'threshold', 'severity', 'status', 'is_read'])
+        && data.product_id is string && data.product_id.size() >= 1 && data.product_id.size() <= 128
+        && data.product_name is string && data.product_name.size() >= 1 && data.product_name.size() <= 160
+        && data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 64
+        && data.current_stock is number && data.current_stock >= 0
+        && data.threshold is number && data.threshold >= 0
+        && data.severity in ['out_of_stock', 'critical', 'low']
+        && data.status in ['active', 'acknowledged', 'resolved']
+        && data.is_read is bool
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 64))
+        && (!('domain' in data) || (data.domain is string && data.domain.size() <= 64))
+        && (!('sport_type' in data) || (data.sport_type is string && data.sport_type.size() <= 64))
+        && (!('popularity_reason' in data) || (data.popularity_reason is string && data.popularity_reason.size() <= 160))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
+        && (!('updated_at' in data) || (data.updated_at is string && data.updated_at.size() <= 64))
+        && (!('resolved_at' in data) || (data.resolved_at is string && data.resolved_at.size() <= 64));
+    }
+
+    match /store_alert_settings/{settingId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidStoreId(settingId) && isValidStoreAlertSettings(incoming());
+      allow delete: if isAdmin() && isValidStoreId(settingId);
+    }
+
+    match /store_stock_alerts/{alertId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidStoreId(alertId) && isValidStoreStockAlert(incoming());
+      allow delete: if isAdmin() && isValidStoreId(alertId);
+    }
+
+    function isValidStoreRestockRequest(data) {
+      return data.keys().hasAll(['product_id', 'product_name', 'sku', 'email', 'status'])
+        && data.keys().hasOnly(['id', 'product_id', 'product_name', 'sku', 'brand', 'email', 'user_id', 'user_name', 'status', 'created_at', 'updated_at', 'notified_at', 'last_stock_notified'])
+        && data.product_id is string && data.product_id.size() >= 1 && data.product_id.size() <= 128
+        && data.product_name is string && data.product_name.size() >= 1 && data.product_name.size() <= 160
+        && data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 64
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && data.status in ['waiting', 'notified', 'cancelled']
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 64))
+        && (!('user_id' in data) || (data.user_id is string && data.user_id.size() <= 128))
+        && (!('user_name' in data) || (data.user_name is string && data.user_name.size() <= 100))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
+        && (!('updated_at' in data) || (data.updated_at is string && data.updated_at.size() <= 64))
+        && (!('notified_at' in data) || (data.notified_at is string && data.notified_at.size() <= 64))
+        && (!('last_stock_notified' in data) || (data.last_stock_notified is number && data.last_stock_notified >= 0));
+    }
+
+    match /store_restock_requests/{requestId} {
+      allow get: if isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid);
+      allow list: if isMock() || isAdmin() || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isValidStoreId(requestId) && isValidStoreRestockRequest(incoming()) && (
+        isMock() || isAdmin() || (
+          incoming().status == 'waiting' && (
+            (isSignedIn() && incoming().get('user_id', '') == request.auth.uid) ||
+            (!isSignedIn() && incoming().get('user_id', 'guest') == 'guest')
+          )
+        )
+      );
+      allow update: if isValidStoreId(requestId) && isValidStoreRestockRequest(incoming()) && (
+        isMock() || isAdmin() || (
+          isSignedIn() &&
+          existing().user_id == request.auth.uid &&
+          incoming().user_id == existing().user_id &&
+          incoming().product_id == existing().product_id &&
+          incoming().status in ['waiting', 'cancelled']
+        )
+      );
+      allow delete: if isValidStoreId(requestId) && (
+        isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid)
+      );
+    }
+
+    function isValidStorePaymentMethod(data) {
+      return data.keys().hasAll(['user_id', 'provider', 'label', 'is_default', 'created_at'])
+        && data.keys().hasOnly(['id', 'user_id', 'provider', 'label', 'brand', 'last4', 'expiry', 'is_default', 'created_at'])
+        && data.user_id is string && data.user_id.size() >= 1 && data.user_id.size() <= 128
+        && data.provider in ['stripe_card', 'razorpay_upi', 'cod', 'bank_transfer', 'upi', 'paypal', 'custom_qr']
+        && data.label is string && data.label.size() >= 2 && data.label.size() <= 80
+        && data.is_default is bool
+        && data.created_at is string && data.created_at.size() <= 64
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 40))
+        && (!('last4' in data) || (data.last4 is string && data.last4.size() <= 12))
+        && (!('expiry' in data) || (data.expiry is string && data.expiry.size() <= 10));
+    }
+
+    match /store_payment_methods/{methodId} {
+      allow get: if isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid);
+      allow list: if isMock() || isAdmin() || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isValidStoreId(methodId) && isValidStorePaymentMethod(incoming()) && (
+        isMock() || (isSignedIn() && incoming().user_id == request.auth.uid)
+      );
+      allow update: if isValidStoreId(methodId) && isValidStorePaymentMethod(incoming()) && (
+        isMock() || (
+          isSignedIn() &&
+          existing().user_id == request.auth.uid &&
+          incoming().user_id == existing().user_id
+        )
+      );
+      allow delete: if isValidStoreId(methodId) && (
+        isMock() || isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid)
+      );
+    }
+
+    function isValidStoreAnalyticsEvent(data) {
+      return data.keys().hasAll(['event_type', 'session_id', 'user_id', 'created_at'])
+        && data.keys().hasOnly(['id', 'event_type', 'product_id', 'product_name', 'brand', 'domain', 'sport_type', 'checkout_mode', 'session_id', 'user_id', 'revenue_usd', 'units', 'created_at'])
+        && data.event_type in ['store_view', 'product_view', 'add_to_cart', 'quick_buy_open', 'checkout_start', 'order_completed']
+        && data.session_id is string && data.session_id.size() >= 1 && data.session_id.size() <= 128
+        && data.user_id is string && data.user_id.size() >= 1 && data.user_id.size() <= 128
+        && data.created_at is string && data.created_at.size() <= 64
+        && (!('product_id' in data) || (data.product_id is string && data.product_id.size() <= 128))
+        && (!('product_name' in data) || (data.product_name is string && data.product_name.size() <= 160))
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 64))
+        && (!('domain' in data) || (data.domain is string && data.domain.size() <= 64))
+        && (!('sport_type' in data) || (data.sport_type is string && data.sport_type.size() <= 64))
+        && (!('checkout_mode' in data) || data.checkout_mode in ['quick_buy', 'cart_checkout'])
+        && (!('revenue_usd' in data) || (data.revenue_usd is number && data.revenue_usd >= 0))
+        && (!('units' in data) || (data.units is number && data.units >= 0));
+    }
+
+    match /store_analytics_events/{eventId} {
+      allow get, list: if isMock() || isAdmin();
+      allow create: if isValidStoreId(eventId) && isValidStoreAnalyticsEvent(incoming()) && (
+        isMock() || isAdmin() ||
+        (isSignedIn() && incoming().user_id == request.auth.uid) ||
+        (!isSignedIn() && incoming().user_id == 'guest')
+      );
+      allow update: if false;
+      allow delete: if isAdmin() && isValidStoreId(eventId);
+    }
+
+    function isValidStorePayoutAccount(data) {
+      return data.keys().hasAll(['label', 'account_type', 'account_holder_name', 'currency_scope', 'is_active', 'is_primary'])
+        && data.keys().hasOnly([
+          'id', 'label', 'account_type', 'account_holder_name', 'bank_name',
+          'account_number', 'ifsc_or_routing', 'branch_name', 'upi_id',
+          'paypal_handle', 'payment_link', 'qr_payload', 'qr_code_url',
+          'razorpay_key_id', 'razorpay_account_id', 'currency_scope',
+          'instructions', 'is_active', 'is_primary', 'created_at', 'updated_at'
+        ])
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 80
+        && data.account_type in ['bank_transfer', 'razorpay', 'upi', 'stripe', 'paypal', 'custom_qr']
+        && data.account_holder_name is string && data.account_holder_name.size() >= 1 && data.account_holder_name.size() <= 120
+        && data.currency_scope in ['INR', 'USD', 'ALL']
+        && data.is_active is bool
+        && data.is_primary is bool
+        && (!('bank_name' in data) || (data.bank_name is string && data.bank_name.size() <= 120))
+        && (!('account_number' in data) || (data.account_number is string && data.account_number.size() <= 64))
+        && (!('ifsc_or_routing' in data) || (data.ifsc_or_routing is string && data.ifsc_or_routing.size() <= 40))
+        && (!('branch_name' in data) || (data.branch_name is string && data.branch_name.size() <= 120))
+        && (!('upi_id' in data) || (data.upi_id is string && data.upi_id.size() <= 100))
+        && (!('paypal_handle' in data) || (data.paypal_handle is string && data.paypal_handle.size() <= 120))
+        && (!('payment_link' in data) || (data.payment_link is string && data.payment_link.size() <= 500))
+        && (!('qr_payload' in data) || (data.qr_payload is string && data.qr_payload.size() <= 600))
+        && (!('qr_code_url' in data) || (data.qr_code_url is string && data.qr_code_url.size() <= 120000))
+        && (!('razorpay_key_id' in data) || (data.razorpay_key_id is string && data.razorpay_key_id.size() <= 80))
+        && (!('razorpay_account_id' in data) || (data.razorpay_account_id is string && data.razorpay_account_id.size() <= 80))
+        && (!('instructions' in data) || (data.instructions is string && data.instructions.size() <= 400))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 64))
+        && (!('updated_at' in data) || (data.updated_at is string && data.updated_at.size() <= 64));
+    }
+
+    match /store_payout_accounts/{accountId} {
+      allow get, list: if isMock() || isAdmin() || resource.data.is_active == true;
+      allow create, update: if isAdmin() && isValidStoreId(accountId) && isValidStorePayoutAccount(incoming());
+      allow delete: if isAdmin();
+    }
   }
 }

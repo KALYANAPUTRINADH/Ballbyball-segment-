@@ -41,6 +41,8 @@ import AboutUs from "./pages/AboutUs";
 import HelpCenter from "./pages/HelpCenter";
 import { Logo } from "./components/Logo";
 import { AdSenseLoader } from "./components/AdSenseLoader";
+import Store from "./pages/Store";
+import { StoreAdminManager } from "./components/StoreAdminManager";
 
 function PlaceholderView({ title }: { title: string }) {
   return (
@@ -54,7 +56,7 @@ function PlaceholderView({ title }: { title: string }) {
   );
 }
 export default function App() {
-  const { isPro, isAdmin } = useAuth();
+  const { user, isPro, isAdmin, loading: authLoading } = useAuth();
   
   if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('overlay')) {
     return <ScoreboardOverlay />;
@@ -82,15 +84,23 @@ export default function App() {
   }
   
   const [showProModal, setShowProModal] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("last_tab") || "home"
-      : "home",
-  );
+  const [currentTab, setCurrentTab] = useState(() => {
+    if (typeof window === "undefined") return "home";
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlTab = searchParams.get('tab');
+    const urlProduct = searchParams.get('product');
+    if (urlProduct || urlTab === 'store') {
+      return "store";
+    }
+    return localStorage.getItem("last_tab") || "home";
+  });
 
   const getInitialFullScreen = () => {
     if (typeof window === "undefined") return null;
     const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('product') || searchParams.get('tab') === 'store') {
+      return null;
+    }
     const urlMatchId = searchParams.get('matchId') || searchParams.get('match') || 
       (window.location.pathname.startsWith('/match/') ? window.location.pathname.split('/match/')[1] : null);
     
@@ -125,14 +135,24 @@ export default function App() {
     "Performance",
     "Tournament Hub"
   ];
+  const adminFeatures = ["Store Admin", "Admin Panel"];
 
   React.useEffect(() => {
     if (fullScreenView && proFeatures.includes(fullScreenView) && !isPro && !isAdmin) {
       setFullScreenView(null);
     }
-  }, [isPro, isAdmin, fullScreenView]);
+    if (!authLoading && fullScreenView && adminFeatures.includes(fullScreenView) && !(user && isAdmin)) {
+      setFullScreenView(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("last_fullscreen");
+      }
+    }
+  }, [authLoading, user, isPro, isAdmin, fullScreenView]);
 
   const handleSetFullScreenView = (view: string | null) => {
+    if (view && adminFeatures.includes(view) && !(user && isAdmin)) {
+      return;
+    }
     if (view && proFeatures.includes(view) && !isPro && !isAdmin) {
       setShowProModal(view);
       return;
@@ -191,6 +211,8 @@ export default function App() {
         return <MyCricket setFullScreenView={handleSetFullScreenView} />;
       case "community":
         return <Community />;
+      case "store":
+        return <Store setFullScreenView={handleSetFullScreenView} />;
       default:
         return <Home />;
     }
@@ -275,6 +297,23 @@ export default function App() {
     return <HelpCenter setFullScreenView={handleSetFullScreenView} />;
   }
 
+  if (fullScreenView === "Store Admin" && user && isAdmin) {
+    return (
+      <>
+        <CookieConsent />
+        <AdSenseLoader />
+        <LocationConsentModal />
+        <StoreAdminManager
+          onBack={() => handleSetFullScreenView(null)}
+          onOpenStorefront={() => {
+            handleSetFullScreenView(null);
+            setCurrentTab("store");
+          }}
+        />
+      </>
+    );
+  }
+
   if (
     [
       "My Performance",
@@ -293,7 +332,8 @@ export default function App() {
       "Contact",
       "Rules Handbook",
       "More",
-      "Admin Panel",
+      ...(user && isAdmin ? ["Admin Panel"] : []),
+      "Store",
       "Streaming Setup",
       "OBS Live Stream",
       "About Us",
@@ -339,7 +379,8 @@ export default function App() {
               {fullScreenView === "Contact" && <Contact />}
               {fullScreenView === "Rules Handbook" && <RulesHandbook />}
               {fullScreenView === "More" && <More setFullScreenView={handleSetFullScreenView} />}
-              {fullScreenView === "Admin Panel" && <AdminPanel />}
+              {fullScreenView === "Admin Panel" && user && isAdmin && <AdminPanel />}
+              {fullScreenView === "Store" && <Store setFullScreenView={handleSetFullScreenView} />}
               {fullScreenView === "Streaming Setup" && (
                 <StreamingSetup setFullScreenView={handleSetFullScreenView} />
               )}

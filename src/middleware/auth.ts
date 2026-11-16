@@ -60,7 +60,9 @@ export const requireAuth = async (
       (decodedToken.uid && decodedToken.uid.includes(p))
     );
 
-    if (isPhoneAdmin) {
+    const isEmailAdmin = (decodedToken.email || '').toLowerCase() === 'trinadhkalyanapu@gmail.com';
+
+    if (isPhoneAdmin || isEmailAdmin) {
       assignedRole = 'admin';
     }
 

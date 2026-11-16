@@ -151,6 +151,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
     { id: 'looking', label: 'Looking', icon: LookingIcon },
     { id: 'mycricket', label: 'My Sports', icon: Activity },
     { id: 'community', label: 'Community', icon: Users },
+    { id: 'store', label: 'Store', icon: ShoppingBag },
   ];
 
   const handleMenuAction = (action: string) => {
@@ -193,13 +194,19 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
       return;
     }
     
-    if (['Go Live', 'Pro Dashboard', 'My Performance', 'Leaderboards', 'Streamlify Awards', 'Video Segmentation', 'Profile', 'Team Chat', 'Coach Portal', 'Calendar & Schedule', 'App code', 'Clubs', 'Associations', 'Contact', 'More', 'Admin Panel'].includes(action)) {
+    if (['Admin Panel', 'Store Admin'].includes(action) && !(user && isAdmin)) {
+      setIsSidebarOpen(false);
+      return;
+    }
+    if (['Go Live', 'Pro Dashboard', 'My Performance', 'Leaderboards', 'Streamlify Awards', 'Video Segmentation', 'Profile', 'Team Chat', 'Coach Portal', 'Calendar & Schedule', 'App code', 'Clubs', 'Associations', 'Contact', 'More', 'Admin Panel', 'Store Admin'].includes(action)) {
       if (['My Performance'].includes(action) && !isPro && !isAdmin) {
         setIsProOpen(true);
         setIsSidebarOpen(false);
         return;
       }
       setFullScreenView(action);
+    } else if (action === 'Store') {
+      setCurrentTab('store');
     } else if (action === 'My Sports' || action === 'My Cricket') {
       setCurrentTab('mycricket');
     } else if (action === 'Looking') {
@@ -474,7 +481,11 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children, currentTab
 
                 <div className="bg-white border-y border-gray-100">
                   {[
-                    ...(isAdmin ? [{ icon: '🛠️', label: 'Admin Panel', badge: 'System' }] : []),
+                    ...(user && isAdmin ? [
+                      { icon: '🛠️', label: 'Admin Panel', badge: 'System' },
+                      { icon: '📦', label: 'Store Admin', badge: 'Store' },
+                    ] : []),
+                    { icon: '🛍️', label: 'Store', badge: 'Gear' },
                     { icon: 'ℹ️', label: 'About Us' },
                     { icon: '❓', label: 'Help Center & FAQ' },
                     { icon: '🏆', label: 'Add a Tournament/Series', badge: 'Pro ($2.99/m)' },
